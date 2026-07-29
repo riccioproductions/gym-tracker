@@ -1,0 +1,17 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+.settings/
+.classpath
+.project
+.apt_generated/
+.apt_generated_tests/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+application-local.yml
+application-secrets.yml
+.env
+src/main/resources/application.yml
