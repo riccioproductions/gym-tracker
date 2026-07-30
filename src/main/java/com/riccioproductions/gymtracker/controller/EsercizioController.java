@@ -1,10 +1,8 @@
 package com.riccioproductions.gymtracker.controller;
 
-import com.riccioproductions.gymtracker.entity.Esercizio;
-import com.riccioproductions.gymtracker.repository.EsercizioRepository;
-import org.springframework.http.ResponseEntity;
+import com.riccioproductions.gymtracker.model.Esercizio;
+import com.riccioproductions.gymtracker.service.EsercizioService;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
 @RestController
@@ -12,22 +10,30 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class EsercizioController {
 
-    private final EsercizioRepository esercizioRepository;
+    private final EsercizioService service;
 
-    public EsercizioController(EsercizioRepository esercizioRepository) {
-        this.esercizioRepository = esercizioRepository;
+    public EsercizioController(EsercizioService service) {
+        this.service = service;
     }
 
     @GetMapping
-    public ResponseEntity<List<Esercizio>> getTuttiEsercizi() {
-        return ResponseEntity.ok(esercizioRepository.findAll());
+    public List<Esercizio> tutti() {
+        return service.trovaTutti();
     }
 
     @PostMapping
-    public ResponseEntity<Esercizio> creaEsercizio(@RequestBody Esercizio esercizio) {
-        // Per ora salviamo l'esercizio come "globale". 
-        // In futuro si potrebbe associare al JWT dell'utente loggato.
-        Esercizio salvato = esercizioRepository.save(esercizio);
-        return ResponseEntity.ok(salvato);
+    public Esercizio crea(@RequestBody Esercizio esercizio) {
+        return service.salva(esercizio);
+    }
+
+    @PutMapping("/{id}")
+    public Esercizio modifica(@PathVariable Long id, @RequestBody Esercizio esercizio) {
+        esercizio.setId(id);
+        return service.salva(esercizio);
+    }
+
+    @DeleteMapping("/{id}")
+    public void elimina(@PathVariable Long id) {
+        service.elimina(id);
     }
 }

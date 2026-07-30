@@ -15,3 +15,5 @@ application-local.yml
 application-secrets.yml
 .env
 src/main/resources/application.yml
+src/main/resources/application.properties
+/gymtracker-frontend
