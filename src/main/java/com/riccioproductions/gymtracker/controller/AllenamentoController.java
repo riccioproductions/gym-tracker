@@ -57,4 +57,9 @@ public class AllenamentoController {
     public List<Allenamento> storico(@PathVariable Long giornoId) {
         return service.storicoPerGiorno(giornoId);
     }
+	
+	@DeleteMapping("/{id}")
+	public void elimina(@PathVariable Long id) {
+		service.elimina(id);
+	}
 }

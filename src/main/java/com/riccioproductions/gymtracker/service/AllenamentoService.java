@@ -85,4 +85,8 @@ public class AllenamentoService {
     public List<Allenamento> storicoPerGiorno(Long giornoId) {
         return allenamentoRepository.findByGiornoIdOrderByDataInizioDesc(giornoId);
     }
+	
+	public void elimina(Long id) {
+    allenamentoRepository.deleteById(id);
+}
 }

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GymTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="app">
+
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand d-flex flex-column lh-1" href="#" data-nav="schede">
+					<span>GYM⚡️TRACKER</span>
+					<small class="brand-subtext">RICCIO PRODUCTIONS</small>
+				</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-nav="schede">Schede</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-nav="esercizi">Catalogo Esercizi</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-nav="allenamento">Allenamento</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-nav="storico">Storico</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container mt-4">
+
+            <!-- Contenitore per messaggi di errore/successo globali -->
+            <div id="alertContainer"></div>
+
+            <!-- SEZIONE: Elenco Schede -->
+            <section id="section-schede" class="app-section">
+                <h2>Le tue Schede</h2>
+                
+                <button class="btn btn-primary mb-3" onclick="apriFormScheda()">+ Nuova Scheda</button>
+                
+                <div id="listaSchede"></div>
+            </section>
+
+            <!-- SEZIONE: Catalogo Esercizi -->
+            <section id="section-esercizi" class="app-section">
+                <h2>Catalogo Esercizi</h2>
+
+                <button class="btn btn-primary mb-3" onclick="apriFormEsercizio()">+ Nuovo Esercizio</button>
+
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Gruppo Muscolare</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabellaEsercizi"></tbody>
+                </table>
+            </section>
+
+            <!-- SEZIONE: Allenamento -->
+            <section id="section-allenamento" class="app-section">
+                <h2>Allenamento</h2>
+
+                <!-- Vista selezione (quando non c'è un allenamento in corso) -->
+                <div id="allenamentoSelezione">
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <select class="form-select" id="selezioneScheda" onchange="caricaGiorniPerAllenamento()">
+                                <option value="">Seleziona scheda...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <select class="form-select" id="selezioneGiorno">
+                                <option value="">Seleziona giorno...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-success w-100" onclick="avviaAllenamento()">Avvia</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vista allenamento in corso -->
+                <div id="allenamentoInCorso" style="display: none;">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 id="allenamentoTitoloGiorno"></h4>
+                        <div class="fs-3 font-monospace" id="cronometroTotale">00:00:00</div>
+                    </div>
+
+                    <!-- Barra timer di recupero -->
+                    <div id="barraRecupero" class="alert alert-warning d-flex justify-content-between align-items-center" style="display: none;">
+                        <span>Recupero in corso...</span>
+                        <span class="fs-4 font-monospace" id="cronometroRecupero">03:00</span>
+                    </div>
+					<button class="btn btn-outline-warning btn-sm mb-3" onclick="avviaTimerRecupero(DURATA_RECUPERO_SECONDI)">
+						⏱ Avvia Timer Recupero (3:00)
+					</button>
+                    <div id="listaEserciziAllenamento"></div>
+                    <button class="btn btn-danger mt-3" onclick="terminaAllenamento()">Termina Allenamento</button>
+                </div>
+            </section>
+
+            <!-- SEZIONE: Storico -->
+            <section id="section-storico" class="app-section">
+                <h2>Storico Allenamenti</h2>
+
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <select class="form-select" id="storicoSelezioneScheda" onchange="caricaGiorniPerStorico()">
+                            <option value="">Seleziona scheda...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <select class="form-select" id="storicoSelezioneGiorno" onchange="caricaStoricoGiorno()">
+                            <option value="">Seleziona giorno...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="listaStorico"></div>
+            </section>
+
+        </div>
+
+        <!-- Modal per crea/modifica esercizio -->
+        <div class="modal" id="modalEsercizio" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalEsercizioTitolo">Nuovo Esercizio</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="esercizioId">
+                        <div class="mb-3">
+                            <label class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="esercizioNome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Gruppo Muscolare</label>
+                            <input type="text" class="form-control" id="esercizioGruppo" placeholder="es. Petto, Gambe...">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn btn-primary" onclick="salvaEsercizio()">Salva</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal crea/modifica scheda -->
+        <div class="modal" id="modalScheda" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalSchedaTitolo">Nuova Scheda</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="schedaId">
+                        <div class="mb-3">
+                            <label class="form-label">Nome</label>
+                            <input type="text" class="form-control" id="schedaNome" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descrizione</label>
+                            <textarea class="form-control" id="schedaDescrizione"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn btn-primary" onclick="salvaScheda()">Salva</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal crea/modifica giorno -->
+        <div class="modal" id="modalGiorno" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalGiornoTitolo">Nuovo Giorno</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="giornoId">
+                        <input type="hidden" id="giornoSchedaId">
+                        <div class="mb-3">
+                            <label class="form-label">Nome Giorno</label>
+                            <input type="text" class="form-control" id="giornoNome" placeholder="es. Giorno A - Petto/Tricipiti" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Ordine</label>
+                            <input type="number" class="form-control" id="giornoOrdine" value="1">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                        <button type="button" class="btn btn-primary" onclick="salvaGiorno()">Salva</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal gestione esercizi di un giorno -->
+        <div class="modal" id="modalEserciziGiorno" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalEserciziGiornoTitolo">Esercizi del giorno</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="egGiornoId">
+
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Esercizio</th>
+                                    <th>Serie</th>
+                                    <th>Rip. Target</th>
+                                    <th>Carico</th>
+                                    <th>Note</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabellaEserciziGiorno"></tbody>
+                        </table>
+
+                        <hr>
+                        <h6 id="egFormTitolo">Aggiungi Esercizio</h6>
+                        <input type="hidden" id="egId">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <select class="form-select" id="egEsercizioId">
+                                    <option value="">Seleziona esercizio...</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" id="egSerie" placeholder="Serie" min="1">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" id="egRipetizioni" placeholder="Rip. target" min="1">
+                            </div>
+                            <div class="col-md-2">
+                                <input type="number" class="form-control" id="egCarico" placeholder="Carico (kg)" step="0.5">
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-primary w-100" onclick="salvaEsercizioGiorno()">Salva</button>
+                            </div>
+                            <div class="col-md-12">
+                                <input type="text" class="form-control" id="egNote" placeholder="Note (facoltative)">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

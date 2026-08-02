@@ -1,5 +1,6 @@
 package com.riccioproductions.gymtracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ public class SerieEseguita {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "allenamento_id", nullable = false)
     private Allenamento allenamento;

@@ -32,10 +32,10 @@ public class SchedaController {
     }
 
     @PutMapping("/{id}")
-    public Scheda modifica(@PathVariable Long id, @RequestBody Scheda scheda) {
-        scheda.setId(id);
-        return service.salva(scheda);
-    }
+	public Scheda modifica(@PathVariable Long id, @RequestBody Scheda scheda) {
+		scheda.setId(id);
+		return service.salva(scheda);
+	}
 
     @DeleteMapping("/{id}")
     public void elimina(@PathVariable Long id) {

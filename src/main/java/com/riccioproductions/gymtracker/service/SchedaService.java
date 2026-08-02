@@ -24,8 +24,16 @@ public class SchedaService {
     }
 
     public Scheda salva(Scheda scheda) {
-        return repository.save(scheda);
-    }
+    if (scheda.getId() != null) {
+        // Aggiornamento: modifichiamo SOLO i campi voluti sull'entità esistente,
+        // senza toccare la collezione "giorni" già presente nel database
+        Scheda esistente = trovaPerId(scheda.getId());
+        esistente.setNome(scheda.getNome());
+        esistente.setDescrizione(scheda.getDescrizione());
+        return repository.save(esistente);
+		}
+    return repository.save(scheda);
+	}
 
     public void elimina(Long id) {
         repository.deleteById(id);

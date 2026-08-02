@@ -22,10 +22,20 @@ public class GiornoService {
     }
 
     public Giorno salva(Long schedaId, Giorno giorno) {
-        Scheda scheda = schedaService.trovaPerId(schedaId);
-        giorno.setScheda(scheda);
-        return repository.save(giorno);
+    Scheda scheda = schedaService.trovaPerId(schedaId);
+
+    if (giorno.getId() != null) {
+        Giorno esistente = repository.findById(giorno.getId())
+                .orElseThrow(() -> new RuntimeException("Giorno non trovato: " + giorno.getId()));
+        esistente.setNome(giorno.getNome());
+        esistente.setOrdine(giorno.getOrdine());
+        esistente.setScheda(scheda);
+        return repository.save(esistente);
     }
+
+    giorno.setScheda(scheda);
+    return repository.save(giorno);
+}
 
     public void elimina(Long id) {
         repository.deleteById(id);
