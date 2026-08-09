@@ -21,6 +21,8 @@ public class SerieEseguita {
     @ManyToOne
     @JoinColumn(name = "esercizio_giorno_id", nullable = false)
     private EsercizioGiorno esercizioGiorno;
+    
+    private String nomeEsercizio;
 
     private Integer numeroSerie;
     private Integer ripetizioniEffettuate;

@@ -1,5 +1,5 @@
 //URL base del backend Spring Boot
-const API_BASE = `http://${window.location.hostname}:8080/api`;
+const API_BASE = `http://localhost:8080/api`;
 
 //Cache in memoria per evitare chiamate di rete ridondanti (Esercizi)
 let eserciziCorrenti = [];
@@ -536,7 +536,7 @@ function calcolaRiepilogoPerEsercizio(serie) {
 
     serie.forEach(s => {
         const id = s.esercizioGiorno.esercizio.id;
-        const nome = s.esercizioGiorno.esercizio.nome;
+        const nome = s.nomeEsercizio || s.esercizioGiorno.esercizio.nome;
 
         if (!riepilogo[id]) {
             riepilogo[id] = { nome, totaleRipetizioni: 0, caricoMassimo: 0 };
@@ -586,22 +586,22 @@ function creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente) {
 
     const serieRaggruppate = {};
     serie.forEach(s => {
-        const id = s.esercizioGiorno.esercizio.id;
+        const id = s.esercizioGiorno.id;
         if (!serieRaggruppate[id]) serieRaggruppate[id] = [];
         serieRaggruppate[id].push(s);
     });
 
     let corpoEsercizi = '';
-    for (const [esercizioId, serieDelEsercizio] of Object.entries(serieRaggruppate)) {
-        const nomeEsercizio = serieDelEsercizio[0].esercizioGiorno.esercizio.nome;
-        const dettaglioSerie = serieDelEsercizio
+    for (const [slotId, serieDelloSlot] of Object.entries(serieRaggruppate)) {
+        const nomeEsercizio = serieDelloSlot[0].nomeEsercizio || serieDelloSlot[0].esercizioGiorno.esercizio.nome;
+        const dettaglioSerie = serieDelloSlot
             .sort((a, b) => a.numeroSerie - b.numeroSerie)
             .map(s => `${s.ripetizioniEffettuate}×${s.caricoEffettivo ?? '-'}kg`)
             .join(', ');
 
         const icona = calcolaIconaTrend(
-            riepilogoAttuale[esercizioId],
-            riepilogoPrecedente ? riepilogoPrecedente[esercizioId] : null
+            riepilogoAttuale[slotId],
+            riepilogoPrecedente ? riepilogoPrecedente[slotId] : null
         );
 
         corpoEsercizi += `<div><strong>${nomeEsercizio}:</strong> ${dettaglioSerie} ${icona}</div>`;

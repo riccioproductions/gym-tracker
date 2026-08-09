@@ -57,6 +57,7 @@ public class AllenamentoService {
         SerieEseguita serie = new SerieEseguita();
         serie.setAllenamento(allenamento);
         serie.setEsercizioGiorno(eg);
+        serie.setNomeEsercizio(eg.getEsercizio().getNome());
         serie.setNumeroSerie(numeroSerie);
         serie.setRipetizioniEffettuate(ripetizioniEffettuate);
         serie.setCaricoEffettivo(caricoEffettivo);
