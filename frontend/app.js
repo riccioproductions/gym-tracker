@@ -1,5 +1,6 @@
 //URL base del backend Spring Boot
 const API_BASE = `http://localhost:8080/api`;
+//URL alternativo: `http://${window.location.hostname}:8080/api`
 
 //Cache in memoria per evitare chiamate di rete ridondanti (Esercizi)
 let eserciziCorrenti = [];
@@ -509,6 +510,7 @@ async function caricaStoricoGiorno() {
 
     if (!giornoId) return;
 
+    // Arriva già ordinato dal più recente al più vecchio (vedi repository)
     const allenamenti = await apiCall(`/allenamenti/storico/giorno/${giornoId}`);
 
     if (allenamenti.length === 0) {
@@ -535,8 +537,8 @@ function calcolaRiepilogoPerEsercizio(serie) {
     const riepilogo = {}; 
 
     serie.forEach(s => {
-        const id = s.esercizioGiorno.esercizio.id;
-        const nome = s.nomeEsercizio || s.esercizioGiorno.esercizio.nome;
+        const id = s.esercizioGiorno.id;
+        const nome = s.nomeEsercizio || s.esercizioGiorno.esercizio.nome; //fallback per serie vecchie senza snapshot
 
         if (!riepilogo[id]) {
             riepilogo[id] = { nome, totaleRipetizioni: 0, caricoMassimo: 0 };
@@ -550,8 +552,9 @@ function calcolaRiepilogoPerEsercizio(serie) {
 }
 
 function calcolaIconaTrend(attuale, precedente) {
-    if (!precedente) return ''; 
+    if (!attuale || !precedente) return ''; //prima volta che si registra questo esercizio: nessuna icona
 
+    //Il carico ha la priorità sulle ripetizioni in caso di direzioni opposte
     if (attuale.caricoMassimo > precedente.caricoMassimo) {
         return '<span class="trend-up" title="Carico aumentato">▲</span>';
     }
