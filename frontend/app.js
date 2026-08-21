@@ -484,11 +484,72 @@ async function mostraAllenamentoInCorso() {
 async function inizializzaSezioneStorico() {
     const schede = await apiCall('/schede');
     const select = document.getElementById('storicoSelezioneScheda');
-    select.innerHTML = '<option value="">Seleziona scheda...</option>' +
+    select.innerHTML = '<option value="">Tutte (ultimi allenamenti)</option>' +
         schede.map(s => `<option value="${s.id}">${s.nome}</option>`).join('');
 
     document.getElementById('storicoSelezioneGiorno').innerHTML = '<option value="">Seleziona giorno...</option>';
-    document.getElementById('listaStorico').innerHTML = '';
+
+    await caricaStoricoRecente(); // vista di default
+}
+
+async function resettaFiltroStorico() {
+    document.getElementById('storicoSelezioneScheda').value = '';
+    document.getElementById('storicoSelezioneGiorno').innerHTML = '<option value="">Seleziona giorno...</option>';
+    await caricaStoricoRecente();
+}
+
+async function caricaStoricoRecente() {
+    const container = document.getElementById('listaStorico');
+    container.innerHTML = '<p class="text-muted">Caricamento...</p>';
+
+    const recenti = await apiCall('/allenamenti/recenti?limite=8');
+
+    if (recenti.length === 0) {
+        container.innerHTML = '<p class="text-muted">Nessun allenamento registrato ancora.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+
+    // Cache per non richiedere più volte lo storico dello stesso giorno se compare più volte tra gli ultimi 8
+    const cacheStoricoPerGiorno = {};
+
+    for (const allenamento of recenti) {
+        const giornoId = allenamento.giorno.id;
+
+        if (!cacheStoricoPerGiorno[giornoId]) {
+            cacheStoricoPerGiorno[giornoId] = await apiCall(`/allenamenti/storico/giorno/${giornoId}`);
+        }
+
+        // Troviamo, all'interno dello storico completo DI QUEL GIORNO, la sessione subito precedente
+        // — non la voce sopra nella lista mista, ma la precedente esecuzione dello stesso giorno
+        const storicoDelGiorno = cacheStoricoPerGiorno[giornoId];
+        const posizione = storicoDelGiorno.findIndex(a => a.id === allenamento.id);
+        const allenamentoPrecedente = storicoDelGiorno[posizione + 1] || null;
+
+        const serie = await apiCall(`/allenamenti/${allenamento.id}/serie`);
+        const riepilogoPrecedente = allenamentoPrecedente
+            ? calcolaRiepilogoPerEsercizio(await apiCall(`/allenamenti/${allenamentoPrecedente.id}/serie`))
+            : null;
+
+        // true = mostra il nome del giorno sulla card, perché qui i giorni sono mescolati
+        container.appendChild(creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente, true));
+    }
+}
+
+async function caricaGiorniPerStorico() {
+    const schedaId = document.getElementById('storicoSelezioneScheda').value;
+    const selectGiorno = document.getElementById('storicoSelezioneGiorno');
+    selectGiorno.innerHTML = '<option value="">Seleziona giorno...</option>';
+
+    if (!schedaId) {
+        await caricaStoricoRecente();
+        return;
+    }
+
+    const giorni = await apiCall(`/schede/${schedaId}/giorni`);
+    selectGiorno.innerHTML += giorni.map(g => `<option value="${g.id}">${g.nome}</option>`).join('');
+    document.getElementById('listaStorico').innerHTML = '<p class="text-muted">Seleziona un giorno per vedere lo storico.</p>';
 }
 
 async function caricaGiorniPerStorico() {
@@ -510,7 +571,6 @@ async function caricaStoricoGiorno() {
 
     if (!giornoId) return;
 
-    // Arriva già ordinato dal più recente al più vecchio (vedi repository)
     const allenamenti = await apiCall(`/allenamenti/storico/giorno/${giornoId}`);
 
     if (allenamenti.length === 0) {
@@ -529,7 +589,8 @@ async function caricaStoricoGiorno() {
 
     allenamentiConSerie.forEach(({ allenamento, serie }, indice) => {
         const riepilogoPrecedente = riepiloghi[indice + 1] || null;
-        container.appendChild(creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente));
+        // false = non serve mostrare il nome del giorno, è già filtrato su uno solo
+        container.appendChild(creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente, false));
     });
 }
 
@@ -572,7 +633,7 @@ function calcolaIconaTrend(attuale, precedente) {
     return '<span class="trend-equal" title="Invariato rispetto alla sessione precedente">=</span>';
 }
 
-function creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente) {
+function creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente, mostraNomeGiorno = false) {
     const card = document.createElement('div');
     card.className = 'card mb-3';
 
@@ -610,9 +671,14 @@ function creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente) {
         corpoEsercizi += `<div><strong>${nomeEsercizio}:</strong> ${dettaglioSerie} ${icona}</div>`;
     }
 
+    const etichettaGiorno = mostraNomeGiorno
+        ? `<span class="tag">${allenamento.giorno.nome}</span>`
+        : '';
+
     card.innerHTML = `
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span>${dataInizio.toLocaleDateString('it-IT')} — ${dataInizio.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</span>
+            ${etichettaGiorno}
             <span class="badge ${allenamento.stato === 'COMPLETATO' ? 'bg-success' : 'bg-warning'}">${allenamento.stato}</span>
             <span class="text-muted">Durata: ${durataTesto}</span>
             <button class="btn btn-sm btn-outline-danger" onclick="eliminaLogAllenamento(${allenamento.id})">Elimina</button>

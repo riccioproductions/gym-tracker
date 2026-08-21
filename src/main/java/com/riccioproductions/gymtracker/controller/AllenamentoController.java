@@ -62,4 +62,9 @@ public class AllenamentoController {
 	public void elimina(@PathVariable Long id) {
 		service.elimina(id);
 	}
+	
+	@GetMapping("/recenti")
+	public List<Allenamento> recenti(@RequestParam(defaultValue = "8") int limite) {
+	    return service.recenti(limite);
+	}
 }

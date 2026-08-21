@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.PageRequest;
 
 @Service
 public class AllenamentoService {
@@ -90,4 +91,8 @@ public class AllenamentoService {
 	public void elimina(Long id) {
     allenamentoRepository.deleteById(id);
 }
+	
+	public List<Allenamento> recenti(int limite) {
+	    return allenamentoRepository.findAllByOrderByDataInizioDesc(PageRequest.of(0, limite));
+	}
 }

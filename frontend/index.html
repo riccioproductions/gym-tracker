@@ -119,23 +119,28 @@
 
             <!-- SEZIONE: Storico -->
             <section id="section-storico" class="app-section">
-                <h2>Storico Allenamenti</h2>
+    <h2>Storico Allenamenti</h2>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-5">
-                        <select class="form-select" id="storicoSelezioneScheda" onchange="caricaGiorniPerStorico()">
-                            <option value="">Seleziona scheda...</option>
-                        </select>
-                    </div>
-                    <div class="col-md-5">
-                        <select class="form-select" id="storicoSelezioneGiorno" onchange="caricaStoricoGiorno()">
-                            <option value="">Seleziona giorno...</option>
-                        </select>
-                    </div>
-                </div>
+    <div class="row g-2 mb-3 align-items-end">
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Filtra per scheda</label>
+            <select class="form-select" id="storicoSelezioneScheda" onchange="caricaGiorniPerStorico()">
+                <option value="">Tutte (ultimi allenamenti)</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small text-muted">Filtra per giorno</label>
+            <select class="form-select" id="storicoSelezioneGiorno" onchange="caricaStoricoGiorno()">
+                <option value="">Seleziona giorno...</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-outline-secondary w-100" onclick="resettaFiltroStorico()">Mostra ultimi allenamenti</button>
+        </div>
+    </div>
 
-                <div id="listaStorico"></div>
-            </section>
+    <div id="listaStorico"></div>
+</section>
 
         </div>
 
