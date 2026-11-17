@@ -15,7 +15,7 @@ public class Giorno {
     private Long id;
 
     @Column(nullable = false)
-    private String nome; // es. "Giorno A - Petto/Tricipiti"
+    private String nome; 
 
     private Integer ordine;
 

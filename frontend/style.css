@@ -178,7 +178,7 @@ input::placeholder {
   }
 }
 
-/* --- Estensioni per componenti Bootstrap non coperti sopra --- */
+/*Estensioni per componenti Bootstrap non coperti sopra*/
 
 .navbar {
   background: var(--surface) !important;
@@ -266,7 +266,7 @@ h4, h5, h6 {
   letter-spacing: 0.04em;
 }
 
-/* --- FIX RESPONSIVE PER CARD E LISTE (MOBILE) --- */
+/*FIX RESPONSIVE PER CARD E LISTE (MOBILE)*/
 
 .list-group-item {
   display: flex;
@@ -288,13 +288,13 @@ h4, h5, h6 {
 }
 
 @media (max-width: 576px) {
-  /* Forza l'incolonnamento degli elementi nelle liste (es. "Giorni") */
+  /*Forza l'incolonnamento degli elementi nelle liste (es. "Giorni") */
   .list-group-item {
     flex-direction: column !important;
     align-items: flex-start !important;
   }
 
-  /* Gestisce il blocco dei bottoni (Esercizi, Modifica, Elimina) */
+  /*Gestisce il blocco dei bottoni (Esercizi, Modifica, Elimina) */
   .list-group-item > div:last-child,
   .list-group-item .d-flex {
     width: 100%;
@@ -304,7 +304,7 @@ h4, h5, h6 {
     margin-top: 0.5rem;
   }
 
-  /* Forza l'incolonnamento anche nell'intestazione della Card principale 
+  /*Forza l'incolonnamento anche nell'intestazione della Card principale 
      (es. Titolo scheda e bottoni Modifica/Elimina) */
   .card-body > .d-flex.justify-content-between {
     flex-direction: column !important;
@@ -312,7 +312,7 @@ h4, h5, h6 {
     gap: 0.8rem;
   }
   
-  /* Margine extra per le azioni della scheda su mobile */
+  /*Margine extra per le azioni della scheda su mobile */
   .card-body > .d-flex.justify-content-between > div:last-child {
     width: 100%;
     display: flex;
@@ -325,7 +325,7 @@ h4, h5, h6 {
   }
 }
 
-/* --- CORREZIONE COLORI: Tasti/Badge Verdi -> Rossi (uguali al menu attivo) --- */
+/*CORREZIONE COLORI: Tasti/Badge Verdi -> Rossi (uguali al menu attivo) --- */
 .btn-success {
   background-color: var(--accent) !important;
   border-color: var(--accent) !important;

@@ -14,5 +14,5 @@ public class Esercizio {
     @Column(nullable = false, unique = true)
     private String nome;
 
-    private String gruppoMuscolare; // facoltativo, es. "Petto", "Gambe"
+    private String gruppoMuscolare; 
 }

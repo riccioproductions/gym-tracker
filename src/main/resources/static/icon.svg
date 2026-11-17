@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2138 2138" width="2138" height="2138">
+  <!-- Sfondo arancio pieno (full-bleed per icone app/PWA) -->
+  <rect width="2138" height="2138" fill="#FF5500" />
+
+  <!-- Bilanciere nero centrato (simmetria esatta rispetto al centro 1069, 1069) -->
+  <g fill="#000000">
+    <!-- Barra centrale -->
+    <rect x="673" y="1015" width="792" height="108" />
+
+    <!-- Lato Sinistro -->
+    <!-- Estremità barra -->
+    <rect x="160" y="1015" width="64" height="108" rx="14" />
+    <!-- Disco esterno (piccolo) -->
+    <rect x="254" y="857" width="108" height="424" rx="28" />
+    <!-- Disco centrale (medio) -->
+    <rect x="392" y="793" width="108" height="552" rx="28" />
+    <!-- Disco interno (grande) -->
+    <rect x="530" y="727" width="108" height="684" rx="28" />
+
+    <!-- Lato Destro -->
+    <!-- Disco interno (grande) -->
+    <rect x="1500" y="727" width="108" height="684" rx="28" />
+    <!-- Disco centrale (medio) -->
+    <rect x="1638" y="793" width="108" height="552" rx="28" />
+    <!-- Disco esterno (piccolo) -->
+    <rect x="1776" y="857" width="108" height="424" rx="28" />
+    <!-- Estremità barra -->
+    <rect x="1914" y="1015" width="64" height="108" rx="14" />
+  </g>
+</svg>

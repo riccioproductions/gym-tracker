@@ -16,3 +16,4 @@ application-secrets.yml
 .env
 src/main/resources/application.yml
 src/main/resources/application.properties
+logo.psd

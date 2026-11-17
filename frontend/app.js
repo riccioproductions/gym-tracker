@@ -5,7 +5,7 @@ const API_BASE = `http://localhost:8080/api`;
 //Cache in memoria per evitare chiamate di rete ridondanti (Esercizi)
 let eserciziCorrenti = [];
 
-// ------- Navigazione tra sezioni -------
+//Navigazione tra sezioni
 function mostraSezione(nomeSezione) {
     document.querySelectorAll('.app-section').forEach(sezione => {
         sezione.style.display = 'none';
@@ -34,7 +34,7 @@ document.querySelectorAll('[data-nav]').forEach(link => {
     });
 });
 
-// ------- Helper generico per chiamate al backend -------
+//Helper generico per chiamate al backend
 async function apiCall(endpoint, metodo = 'GET', corpo = null) {
     const opzioni = {
         method: metodo,
@@ -63,7 +63,7 @@ function mostraErrore(messaggio) {
     `;
 }
 
-// ------- CRUD Esercizi -------
+//CRUD Esercizi
 let modalEsercizio;
 
 async function caricaEsercizi() {
@@ -144,7 +144,7 @@ async function eliminaEsercizio(id) {
     }
 }
 
-// ------- CRUD Schede + Giorni -------
+//CRUD Schede + Giorni
 let modalScheda, modalGiorno;
 let cacheSchede = []; 
 
@@ -194,7 +194,7 @@ async function caricaSchede() {
     }
 }
 
-// --- Form Scheda ---
+//Form Scheda
 function apriFormScheda(id = null) {
     document.getElementById('schedaId').value = '';
     document.getElementById('schedaNome').value = '';
@@ -249,7 +249,7 @@ async function eliminaScheda(id) {
     }
 }
 
-// --- Form Giorno ---
+//Form Giorno
 async function apriFormGiorno(schedaId, giornoId = null) {
     document.getElementById('giornoId').value = '';
     document.getElementById('giornoSchedaId').value = schedaId;
@@ -307,7 +307,7 @@ async function eliminaGiorno(giornoId, schedaId) {
     }
 }
 
-// ------- Esercizi dentro un Giorno -------
+//Esercizi dentro un Giorno
 let modalEserciziGiorno;
 let cacheEserciziCatalogo = [];
 let egGiornoIdCorrente = null;
@@ -419,7 +419,7 @@ async function eliminaEsercizioGiorno(id) {
     }
 }
 
-// ------- Sezione Allenamento -------
+//Sezione Allenamento
 
 let allenamentoCorrente = null;
 let intervalloCronometro = null;
@@ -479,7 +479,7 @@ async function mostraAllenamentoInCorso() {
     avviaCronometroTotale(allenamentoCorrente.dataInizio);
 }
 
-// ------- Sezione Storico -------
+//Sezione Storico
 
 async function inizializzaSezioneStorico() {
     const schede = await apiCall('/schede');
@@ -489,7 +489,7 @@ async function inizializzaSezioneStorico() {
 
     document.getElementById('storicoSelezioneGiorno').innerHTML = '<option value="">Seleziona giorno...</option>';
 
-    await caricaStoricoRecente(); // vista di default
+    await caricaStoricoRecente(); //vista di default
 }
 
 async function resettaFiltroStorico() {
@@ -511,7 +511,7 @@ async function caricaStoricoRecente() {
 
     container.innerHTML = '';
 
-    // Cache per non richiedere più volte lo storico dello stesso giorno se compare più volte tra gli ultimi 8
+    //Cache per non richiedere più volte lo storico dello stesso giorno se compare più volte tra gli ultimi 8
     const cacheStoricoPerGiorno = {};
 
     for (const allenamento of recenti) {
@@ -521,8 +521,8 @@ async function caricaStoricoRecente() {
             cacheStoricoPerGiorno[giornoId] = await apiCall(`/allenamenti/storico/giorno/${giornoId}`);
         }
 
-        // Troviamo, all'interno dello storico completo DI QUEL GIORNO, la sessione subito precedente
-        // — non la voce sopra nella lista mista, ma la precedente esecuzione dello stesso giorno
+        //Troviamo, all'interno dello storico completo DI QUEL GIORNO, la sessione subito precedente
+        //non la voce sopra nella lista mista, ma la precedente esecuzione dello stesso giorno
         const storicoDelGiorno = cacheStoricoPerGiorno[giornoId];
         const posizione = storicoDelGiorno.findIndex(a => a.id === allenamento.id);
         const allenamentoPrecedente = storicoDelGiorno[posizione + 1] || null;
@@ -532,7 +532,7 @@ async function caricaStoricoRecente() {
             ? calcolaRiepilogoPerEsercizio(await apiCall(`/allenamenti/${allenamentoPrecedente.id}/serie`))
             : null;
 
-        // true = mostra il nome del giorno sulla card, perché qui i giorni sono mescolati
+        //true = mostra il nome del giorno sulla card, perché qui i giorni sono mescolati
         container.appendChild(creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente, true));
     }
 }
@@ -589,7 +589,7 @@ async function caricaStoricoGiorno() {
 
     allenamentiConSerie.forEach(({ allenamento, serie }, indice) => {
         const riepilogoPrecedente = riepiloghi[indice + 1] || null;
-        // false = non serve mostrare il nome del giorno, è già filtrato su uno solo
+        //false = non serve mostrare il nome del giorno, è già filtrato su uno solo
         container.appendChild(creaCardStoricoAllenamento(allenamento, serie, riepilogoPrecedente, false));
     });
 }
@@ -719,7 +719,7 @@ async function terminaAllenamento() {
     }
 }
 
-// ------- Esercizi + Serie durante l'Allenamento -------
+//Esercizi + Serie durante l'Allenamento
 
 let esercizioGiornoAllenamento = [];
 let serieEseguiteAllenamento = [];
@@ -831,7 +831,7 @@ async function spuntaSerie(esercizioGiornoId, numeroSerie) {
     }
 }
 
-// ------- Cronometro totale (robusto a sospensioni del tab) -------
+//Cronometro totale (robusto a sospensioni del tab)
 
 let dataInizioAllenamentoCorrente = null;
 
@@ -856,7 +856,7 @@ function aggiornaCronometroTotale() {
         `${formatta(ore)}:${formatta(minuti)}:${formatta(secondi)}`;
 }
 
-// ------- Timer di recupero (basato su orario di fine assoluto, non su un contatore) -------
+//Timer di recupero (basato su orario di fine assoluto, non su un contatore)
 
 let tempoFineRecupero = null;
 
@@ -908,7 +908,7 @@ function ripristinaTimerRecuperoSeAttivo() {
     }
 }
 
-// ------- Ricalcolo immediato quando l'app torna in primo piano (fix iOS/mobile) -------
+//Ricalcolo immediato quando l'app torna in primo piano (fix iOS/mobile)
 
 document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
@@ -917,7 +917,7 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
-// ------- Avvio applicazione -------
+//Avvio applicazione
 document.addEventListener('DOMContentLoaded', () => {
     modalEsercizio = new bootstrap.Modal(document.getElementById('modalEsercizio'));
     modalScheda = new bootstrap.Modal(document.getElementById('modalScheda'));

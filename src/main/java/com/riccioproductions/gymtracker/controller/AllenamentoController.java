@@ -41,11 +41,26 @@ public class AllenamentoController {
 
     @PostMapping("/{id}/serie")
     public SerieEseguita registraSerie(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        Long esercizioGiornoId = Long.valueOf(body.get("esercizioGiornoId").toString());
-        Integer numeroSerie = Integer.valueOf(body.get("numeroSerie").toString());
-        Integer ripetizioniEffettuate = Integer.valueOf(body.get("ripetizioniEffettuate").toString());
-        Double caricoEffettivo = Double.valueOf(body.get("caricoEffettivo").toString());
-        return service.registraSerie(id, esercizioGiornoId, numeroSerie, ripetizioniEffettuate, caricoEffettivo);
+        return service.registraSerie(id,
+                toLong(body.get("esercizioGiornoId")),
+                toInt(body.get("numeroSerie")),
+                toInt(body.get("ripetizioniEffettuate")),
+                toDouble(body.get("caricoEffettivo"))); // il carico può essere null
+    }
+
+    //Corregge ripetizioni/carico di una serie già registrata.
+    @PutMapping("/{id}/serie/{serieId}")
+    public SerieEseguita modificaSerie(@PathVariable Long id, @PathVariable Long serieId,
+                                       @RequestBody Map<String, Object> body) {
+        return service.modificaSerie(id, serieId,
+                toInt(body.get("ripetizioniEffettuate")),
+                toDouble(body.get("caricoEffettivo")));
+    }
+
+    //Toglie la spunta a una serie.
+    @DeleteMapping("/{id}/serie/{serieId}")
+    public void eliminaSerie(@PathVariable Long id, @PathVariable Long serieId) {
+        service.eliminaSerie(id, serieId);
     }
 
     @PutMapping("/{id}/termina")
@@ -57,14 +72,21 @@ public class AllenamentoController {
     public List<Allenamento> storico(@PathVariable Long giornoId) {
         return service.storicoPerGiorno(giornoId);
     }
-	
-	@DeleteMapping("/{id}")
-	public void elimina(@PathVariable Long id) {
-		service.elimina(id);
-	}
-	
-	@GetMapping("/recenti")
-	public List<Allenamento> recenti(@RequestParam(defaultValue = "8") int limite) {
-	    return service.recenti(limite);
-	}
+
+    @DeleteMapping("/{id}")
+    public void elimina(@PathVariable Long id) {
+        service.elimina(id);
+    }
+
+    @GetMapping("/recenti")
+    public List<Allenamento> recenti(@RequestParam(defaultValue = "8") int limite) {
+        return service.recenti(limite);
+    }
+
+    private static boolean vuoto(Object o) {
+        return o == null || o.toString().isBlank();
+    }
+    private static Long toLong(Object o) { return vuoto(o) ? null : Long.valueOf(o.toString()); }
+    private static Integer toInt(Object o) { return vuoto(o) ? null : Integer.valueOf(o.toString()); }
+    private static Double toDouble(Object o) { return vuoto(o) ? null : Double.valueOf(o.toString()); }
 }
