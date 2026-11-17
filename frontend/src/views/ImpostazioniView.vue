@@ -1,6 +1,6 @@
 <script setup>
 import { passoKg, accento, PASSI_PESO, ACCENTI } from '../composables/useSettings'
-import { provaSuono } from '../composables/useRestTimer'
+import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche } from '../composables/useRestTimer'
 
 const formatta = p => String(p).replace('.', ',')
 </script>
@@ -28,7 +28,9 @@ const formatta = p => String(p).replace('.', ',')
 
     <div class="card">
       <h3>Avviso di fine recupero</h3>
-      <p class="dim spiegazione">Suono, popup a centro schermo e, dove supportata, vibrazione, ripetuti ogni 6 secondi finché non tocchi lo schermo. Prova l'avviso e regola il volume del telefono.</p>
+      <p class="dim spiegazione">Suono, popup a centro schermo e, dove supportata, vibrazione, ripetuti ogni 4 secondi finché non tocchi lo schermo. Prova l'avviso e regola il volume del telefono.</p>
+      <label class="interruttore campo"><input type="checkbox" v-model="allarmeAttivo"><span>Allarme sonoro in app</span></label>
+      <label class="interruttore campo"><input type="checkbox" v-model="notificaAttiva" @change="notificaAttiva && chiediNotifiche()"><span>Notifica di sistema</span></label>
       <button class="btn btn-primario" @click="provaSuono">Prova avviso</button>
     </div>
   </section>

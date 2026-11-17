@@ -20,7 +20,12 @@ export const rimanenti = computed(() => (fine.value ? Math.max(0, Math.ceil((fin
 export const progresso = computed(() => (inCorso.value ? Math.min(1, 1 - rimanenti.value / Math.max(1, totale.value)) : 0))
 
 watch(durata, v => ls.set(K_DURATA, v))
+export const allarmeAttivo = ref(ls.get('gt_allarme_app', true))   // suono + vibrazione in app
+export const notificaAttiva = ref(ls.get('gt_notifica', true))     // notifica di sistema
+
 watch(autoAvvio, v => ls.set(K_AUTO, v))
+watch(allarmeAttivo, v => ls.set('gt_allarme_app', v))
+watch(notificaAttiva, v => ls.set('gt_notifica', v))
 
 export function imposta(secondi) {
   durata.value = Math.min(900, Math.max(15, secondi))
@@ -68,13 +73,15 @@ let audio = null
 export function sbloccaAudio() {
   try {
     audio ??= new (window.AudioContext || window.webkitAudioContext)()
-    if (audio.state === 'suspended') audio.resume()
+    if (audio.state !== 'running') audio.resume() // su iOS lo stato può essere anche 'interrupted'
   } catch { /* audio non disponibile */ }
 }
 
 // Suono tipo sveglia: 3 raffiche da 3 beep acuti ad onda quadra (molto più penetrante di un tono dolce)
-function suona() {
+async function suona() {
   if (!audio) return
+  if (audio.state !== 'running') { try { await audio.resume() } catch { /* ignora */ } }
+  if (audio.state !== 'running') return
   const inizio = audio.currentTime + 0.03
   for (let raffica = 0; raffica < 3; raffica++) {
     for (let beep = 0; beep < 3; beep++) {
@@ -106,8 +113,8 @@ watch(appenaFinito, attivo => {
   ripetizione = null
   if (!attivo) return
   const avviso = () => {
-    suona()
-    try { navigator.vibrate?.([400, 150, 400, 150, 400, 150, 700]) } catch { /* ignora */ }
+    if (allarmeAttivo.value) suona()
+    try { if (allarmeAttivo.value) navigator.vibrate?.([400, 150, 400, 150, 400, 150, 700]) } catch { /* ignora */ }
   }
   avviso()
   ripetizione = setInterval(avviso, 4000)
@@ -121,10 +128,21 @@ function finito() {
   ferma()
   appenaFinito.value = true
   try {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification('GymTracker', { body: 'Recupero terminato!' })
+    if (notificaAttiva.value && 'Notification' in window && Notification.permission === 'granted') {
+      const titolo = 'Recupero terminato'
+      const opz = { body: 'Puoi iniziare la serie successiva.', tag: 'recupero' }
+      ;(navigator.serviceWorker?.getRegistration() ?? Promise.resolve())
+        .then(r => (r ? r.showNotification(titolo, opz) : new Notification(titolo, opz)))
+        .catch(() => {})
     }
   } catch { /* ignora */ }
 }
 
 watch(now, n => { if (fine.value !== null && n >= fine.value) finito() })
+
+// Al ritorno in primo piano: riattiva l'audio (iOS lo sospende) e, se l'allarme è già scattato, riparte il suono
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return
+  sbloccaAudio()
+  if (appenaFinito.value && allarmeAttivo.value) setTimeout(suona, 200)
+})

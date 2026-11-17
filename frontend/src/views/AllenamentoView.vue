@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, watch, onActivated, onDeactivated, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onActivated } from 'vue'
 import { api } from '../api'
 import { now } from '../composables/useNow'
 import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, chiediNotifiche } from '../composables/useRestTimer'
@@ -41,7 +41,6 @@ async function carica() {
       await caricaEsercizi()
       if (ripristinatoPer !== inCorso.id) { ripristina(serie.value); ripristinatoPer = inCorso.id }
       chiediNotifiche()
-      bloccaSchermo()
     } else {
       allenamento.value = null
       await caricaSchede()
@@ -84,7 +83,6 @@ async function avvia() {
     ripristinatoPer = allenamento.value.id
     await caricaEsercizi()
     chiediNotifiche()
-    bloccaSchermo()
   } catch (e) { errore(e) } finally { occupato.value = false }
 }
 
@@ -126,7 +124,6 @@ async function termina() {
   try {
     await api(`/allenamenti/${allenamento.value.id}/termina`, 'PUT')
     ferma()
-    rilasciaSchermo()
     allenamento.value = null
     esercizi.value = []; serie.value = []
     Object.keys(bozze).forEach(k => delete bozze[k])
@@ -134,23 +131,7 @@ async function termina() {
   } catch (e) { errore(e) }
 }
 
-// ---- schermo sempre acceso durante l'allenamento ----
-let lock = null
-async function bloccaSchermo() {
-  try {
-    if ('wakeLock' in navigator && !lock) {
-      lock = await navigator.wakeLock.request('screen')
-      lock.addEventListener('release', () => { lock = null })
-    }
-  } catch { /* non supportato */ }
-}
-function rilasciaSchermo() { lock?.release?.(); lock = null }
-const alRitorno = () => { if (!document.hidden && allenamento.value) bloccaSchermo() }
-onMounted(() => document.addEventListener('visibilitychange', alRitorno))
-onUnmounted(() => document.removeEventListener('visibilitychange', alRitorno))
-
 onActivated(carica)
-onDeactivated(rilasciaSchermo)
 </script>
 
 <template>
