@@ -17,3 +17,11 @@ application-secrets.yml
 src/main/resources/application.yml
 src/main/resources/application.properties
 logo.psd
+node_modules/
+frontend/dist/
+src/main/resources/static/
+bin/
+.factorypath
+backups/
+*.sql
+dump_db.sh
