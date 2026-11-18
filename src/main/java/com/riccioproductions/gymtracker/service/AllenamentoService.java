@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -48,7 +49,7 @@ public class AllenamentoService {
 
     public SerieEseguita registraSerie(Long allenamentoId, Long esercizioGiornoId,
                                        Integer numeroSerie, Integer ripetizioniEffettuate,
-                                       Double caricoEffettivo) {
+                                       Double caricoEffettivo, String lato) {
         if (esercizioGiornoId == null || numeroSerie == null || ripetizioniEffettuate == null) {
             throw new RuntimeException("Dati della serie incompleti");
         }
@@ -58,12 +59,18 @@ public class AllenamentoService {
         EsercizioGiorno eg = esercizioGiornoRepository.findById(esercizioGiornoId)
                 .orElseThrow(() -> new RuntimeException("EsercizioGiorno non trovato: " + esercizioGiornoId));
 
-        //Evita doppioni (es. doppio tocco sul pulsante "Fatta")
+        String latoNorm = (lato == null || lato.isBlank()) ? null : lato.trim().toUpperCase();
+        if (latoNorm != null && !latoNorm.equals("SX") && !latoNorm.equals("DX")) {
+            throw new RuntimeException("Lato non valido: " + lato);
+        }
+
+        //Evita doppioni (es. doppio tocco sul pulsante "Fatta"); il lato distingue SX e DX della stessa serie
         boolean giaPresente = serieRepository.findByAllenamentoId(allenamentoId).stream()
                 .anyMatch(s -> s.getEsercizioGiorno().getId().equals(esercizioGiornoId)
-                        && s.getNumeroSerie().equals(numeroSerie));
+                        && s.getNumeroSerie().equals(numeroSerie)
+                        && Objects.equals(s.getLato(), latoNorm));
         if (giaPresente) {
-            throw new RuntimeException("Serie " + numeroSerie + " già registrata");
+            throw new RuntimeException("Serie " + numeroSerie + (latoNorm != null ? " " + latoNorm : "") + " già registrata");
         }
 
         SerieEseguita serie = new SerieEseguita();
@@ -71,6 +78,7 @@ public class AllenamentoService {
         serie.setEsercizioGiorno(eg);
         serie.setNomeEsercizio(eg.getEsercizio().getNome());
         serie.setNumeroSerie(numeroSerie);
+        serie.setLato(latoNorm);
         serie.setRipetizioniEffettuate(ripetizioniEffettuate);
         serie.setCaricoEffettivo(caricoEffettivo);
         serie.setTimestampCompletamento(LocalDateTime.now());

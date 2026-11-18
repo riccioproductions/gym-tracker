@@ -26,4 +26,7 @@ public class EsercizioGiorno {
     private Double carico;
     private String note;
     private Integer ordine;
+
+    // true: ogni serie si esegue per lato (SX e DX)
+    private Boolean unilaterale = false;
 }

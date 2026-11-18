@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { dataIt, oraIt, perEsercizio, riepilogo, trend } from '../utils'
+import { dataIt, oraIt, perEsercizio, riepilogo, trend, compatta, pesoLato } from '../utils'
+import { storicoSoloMinimo } from '../composables/useSettings'
 
 const props = defineProps({ allenamento: Object, serie: Array, precedente: Object, mostraGiorno: Boolean })
 defineEmits(['elimina'])
@@ -11,11 +12,13 @@ const durata = computed(() => {
 })
 const completato = computed(() => props.allenamento.stato === 'COMPLETATO')
 const esercizi = computed(() => {
-  const att = riepilogo(props.serie)
-  return [...perEsercizio(props.serie)].map(([id, lista]) => ({
+  const att = riepilogo(props.serie) // il trend si basa sempre sul lato più debole
+  // Spunta in Impostazioni: solo il valore minore per gli unilaterali, oppure entrambi i lati
+  const mostrate = storicoSoloMinimo.value ? compatta(props.serie) : props.serie
+  return [...perEsercizio(mostrate)].map(([id, lista]) => ({
     id,
     nome: lista[0].nomeEsercizio || lista[0].esercizioGiorno.esercizio.nome,
-    serie: [...lista].sort((a, b) => a.numeroSerie - b.numeroSerie),
+    serie: [...lista].sort((a, b) => a.numeroSerie - b.numeroSerie || pesoLato(a) - pesoLato(b)),
     trend: trend(att[id], props.precedente ? props.precedente[id] : null)
   }))
 })
@@ -40,7 +43,7 @@ const esercizi = computed(() => {
       <strong>{{ e.nome }}</strong>
       <span v-if="e.trend" :class="'trend-' + e.trend.tipo" :title="e.trend.titolo" :aria-label="e.trend.titolo">{{ e.trend.simbolo }}</span>
       <div class="serie-chips">
-        <span v-for="s in e.serie" :key="s.id" class="tag num">{{ s.ripetizioniEffettuate }}×{{ s.caricoEffettivo ?? '-' }}kg</span>
+        <span v-for="s in e.serie" :key="s.id" class="tag num">{{ s.lato ? s.lato + ' ' : '' }}{{ s.ripetizioniEffettuate }}×{{ s.caricoEffettivo ?? '-' }}kg</span>
       </div>
     </div>
   </article>

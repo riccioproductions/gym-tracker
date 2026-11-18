@@ -1,6 +1,8 @@
 <script setup>
-import { durata, PRESET, PASSO, imposta, avvia, autoAvvio, inCorso } from '../composables/useRestTimer'
+import { durata, durataUnilaterale, PRESET, PASSO, imposta, impostaUnilaterale, avvia, autoAvvio, inCorso } from '../composables/useRestTimer'
 import { mmss } from '../utils'
+
+defineProps({ mostraUni: Boolean }) // true se l'allenamento ha esercizi unilaterali
 </script>
 
 <template>
@@ -13,6 +15,11 @@ import { mmss } from '../utils'
     </div>
     <div class="chips">
       <button v-for="p in PRESET" :key="p" class="chip" :aria-pressed="durata === p" @click="imposta(p)">{{ mmss(p) }}</button>
+    </div>
+    <div v-if="mostraUni" class="recupero-riga" style="grid-template-columns: auto 1fr auto; margin-bottom: 12px">
+      <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale - PASSO)" aria-label="Riduci recupero unilaterali di 15 secondi">−{{ PASSO }}s</button>
+      <div class="recupero-tempo"><small>Recupero unilaterali</small><strong class="num">{{ mmss(durataUnilaterale) }}</strong></div>
+      <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale + PASSO)" aria-label="Aumenta recupero unilaterali di 15 secondi">+{{ PASSO }}s</button>
     </div>
     <label class="interruttore"><input type="checkbox" v-model="autoAvvio"><span>Avvia dopo ogni serie</span></label>
   </div>

@@ -20,9 +20,37 @@ export function perEsercizio(serie) {
   return m
 }
 
+/** Unisce le sottoserie SX/DX di una stessa serie in una sola, tenendo il lato più debole (meno ripetizioni).
+ *  Le serie senza lato passano invariate. La serie unita conserva i due lati in `dettaglio`. */
+export function compatta(serie) {
+  const gruppi = new Map()
+  const chiave = s => `${s.esercizioGiorno.id}_${s.numeroSerie}`
+  serie.forEach(s => {
+    if (!s.lato) return
+    if (!gruppi.has(chiave(s))) gruppi.set(chiave(s), [])
+    gruppi.get(chiave(s)).push(s)
+  })
+  const fatti = new Set()
+  const out = []
+  serie.forEach(s => {
+    if (!s.lato) { out.push(s); return }
+    const k = chiave(s)
+    if (fatti.has(k)) return
+    fatti.add(k)
+    const lista = gruppi.get(k)
+    const debole = lista.reduce((a, b) => ((b.ripetizioniEffettuate ?? 0) < (a.ripetizioniEffettuate ?? 0) ? b : a))
+    out.push({ ...debole, lato: null, dettaglio: lista })
+  })
+  return out
+}
+
+/** Per ordinare SX prima di DX */
+export const pesoLato = s => (s.lato === 'DX' ? 1 : 0)
+
 /** { [esercizioGiornoId]: { nome, totaleRipetizioni, caricoMassimo } } */
 export function riepilogo(serie) {
   const r = {}
+  serie = compatta(serie) // per gli unilaterali conta il lato più debole
   serie.forEach(s => {
     const id = s.esercizioGiorno.id
     const nome = s.nomeEsercizio || s.esercizioGiorno.esercizio.nome

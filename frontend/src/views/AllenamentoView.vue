@@ -1,10 +1,10 @@
 <script setup>
-import { ref, reactive, computed, watch, onActivated } from 'vue'
+import { ref, reactive, computed, watch, nextTick, onActivated } from 'vue'
 import { api } from '../api'
 import { now } from '../composables/useNow'
-import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, chiediNotifiche } from '../composables/useRestTimer'
+import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, chiediNotifiche, durataUnilaterale } from '../composables/useRestTimer'
 import { toast, errore, conferma } from '../composables/useUi'
-import { ls, hhmmss } from '../utils'
+import { ls, hhmmss, compatta } from '../utils'
 import { passoKg } from '../composables/useSettings'
 import ExerciseCard from '../components/ExerciseCard.vue'
 import RestPanel from '../components/RestPanel.vue'
@@ -21,6 +21,12 @@ const serie = ref([])             // serie già registrate
 const bozze = reactive({})        // valori in digitazione, per "esercizioGiorno_numeroSerie"
 let ripristinatoPer = null
 
+const lati = eg => (eg.unilaterale ? ['SX', 'DX'] : [null])   // un esercizio unilaterale ha una sottoserie per lato
+const chiave = (egId, n, lato) => `${egId}_${n}${lato ? '_' + lato : ''}`
+const haUnilaterali = computed(() => esercizi.value.some(e => e.unilaterale))
+const ultima = ref({})   // sessione precedente dello stesso giorno: { [esercizioGiornoId]: ['8×20', ...] }
+const eCompleto = eg => serie.value.filter(s => s.esercizioGiorno.id === eg.id).length >= (eg.serie || 1) * lati(eg).length
+
 watch(schedaId, async v => {
   giornoId.value = ''
   ls.set('gt_scheda', v)
@@ -29,7 +35,7 @@ watch(schedaId, async v => {
 
 const trascorso = computed(() => allenamento.value
   ? Math.max(0, Math.floor((now.value - new Date(allenamento.value.dataInizio)) / 1000)) : 0)
-const serieTotali = computed(() => esercizi.value.reduce((t, eg) => t + (eg.serie || 1), 0))
+const serieTotali = computed(() => esercizi.value.reduce((t, eg) => t + (eg.serie || 1) * lati(eg).length, 0))
 const percentuale = computed(() => serieTotali.value ? Math.min(100, (serie.value.length / serieTotali.value) * 100) : 0)
 
 // ---- caricamento ----
@@ -39,6 +45,7 @@ async function carica() {
     if (inCorso) {
       allenamento.value = inCorso
       await caricaEsercizi()
+      caricaUltima() // senza await: non blocca la schermata
       if (ripristinatoPer !== inCorso.id) { ripristina(serie.value); ripristinatoPer = inCorso.id }
       chiediNotifiche()
     } else {
@@ -66,10 +73,38 @@ async function caricaEsercizi() {
   serie.value = se
   eg.forEach(e => {
     for (let n = 1; n <= (e.serie || 1); n++) {
-      const k = `${e.id}_${n}`
-      if (!bozze[k]) bozze[k] = { rip: e.ripetizioniTarget ?? null, car: e.carico ?? null, toccato: false }
+      for (const lato of lati(e)) {
+        const k = chiave(e.id, n, lato)
+        if (!bozze[k]) bozze[k] = { rip: e.ripetizioniTarget ?? null, car: e.carico ?? null, toccato: false }
+      }
     }
   })
+}
+
+// "Ultima volta": serie dell'ultimo allenamento completato dello stesso giorno (per gli unilaterali, il lato più debole)
+async function caricaUltima() {
+  ultima.value = {}
+  try {
+    const lista = await api(`/allenamenti/storico/giorno/${allenamento.value.giorno.id}`)
+    const prec = lista.find(a => a.id !== allenamento.value.id && a.stato === 'COMPLETATO')
+    if (!prec) return
+    const se = compatta(await api(`/allenamenti/${prec.id}/serie`))
+    const r = {}
+    se.sort((a, b) => a.numeroSerie - b.numeroSerie).forEach(s => {
+      (r[s.esercizioGiorno.id] ??= []).push(`${s.ripetizioniEffettuate}×${s.caricoEffettivo ?? '-'}`)
+    })
+    ultima.value = r
+  } catch { /* non bloccante */ }
+}
+
+// Finito un esercizio, scorre al prossimo da fare (o al pulsante Termina se è tutto completo)
+async function vaiAlProssimo(eg) {
+  if (!eCompleto(eg)) return
+  const i = esercizi.value.findIndex(e => e.id === eg.id)
+  const prossimo = esercizi.value.slice(i + 1).find(e => !eCompleto(e)) ?? esercizi.value.find(e => !eCompleto(e))
+  await nextTick()
+  const el = document.getElementById(prossimo ? `eg-${prossimo.id}` : 'btn-termina')
+  el?.scrollIntoView({ behavior: 'smooth', block: prossimo ? 'start' : 'center' })
 }
 
 // ---- azioni ----
@@ -81,26 +116,33 @@ async function avvia() {
     Object.keys(bozze).forEach(k => delete bozze[k])
     ferma()
     ripristinatoPer = allenamento.value.id
+    caricaUltima()
     await caricaEsercizi()
     chiediNotifiche()
   } catch (e) { errore(e) } finally { occupato.value = false }
 }
 
-async function spunta(eg, n) {
-  const b = bozze[`${eg.id}_${n}`]
+async function spunta(eg, n, lato = null) {
+  const b = bozze[chiave(eg.id, n, lato)]
   if (b.rip === null || b.rip === '') return toast('Inserisci le ripetizioni effettuate.', 'errore')
   occupato.value = true
   try {
     const nuova = await api(`/allenamenti/${allenamento.value.id}/serie`, 'POST', {
-      esercizioGiornoId: eg.id, numeroSerie: n, ripetizioniEffettuate: b.rip, caricoEffettivo: b.car
+      esercizioGiornoId: eg.id, numeroSerie: n, ripetizioniEffettuate: b.rip, caricoEffettivo: b.car, lato
     })
     serie.value.push(nuova)
     // le serie successive non ancora toccate ereditano i valori appena confermati
     for (let k = n + 1; k <= (eg.serie || 1); k++) {
-      const nb = bozze[`${eg.id}_${k}`]
+      const nb = bozze[chiave(eg.id, k, lato)]
       if (nb && !nb.toccato) { nb.rip = b.rip; nb.car = b.car }
     }
-    if (autoAvvio.value) avviaRecupero()
+    if (lato === 'SX') { // il peso dell'altro lato di questa serie parte da quello appena confermato
+      const dx = bozze[chiave(eg.id, n, 'DX')]
+      if (dx && !dx.toccato) dx.car = b.car
+    }
+    if (esercizi.value.every(eCompleto)) ferma() // allenamento completo: niente recupero inutile
+    else if (autoAvvio.value) avviaRecupero(eg.unilaterale ? durataUnilaterale.value : undefined)
+    vaiAlProssimo(eg)
   } catch (e) {
     errore(e)
     serie.value = await api(`/allenamenti/${allenamento.value.id}/serie`).catch(() => serie.value)
@@ -113,14 +155,18 @@ async function annulla(s) {
     await api(`/allenamenti/${allenamento.value.id}/serie/${s.id}`, 'DELETE')
     const eraUltima = serie.value.every(x => new Date(x.timestampCompletamento) <= new Date(s.timestampCompletamento))
     serie.value = serie.value.filter(x => x.id !== s.id)
-    const b = bozze[`${s.esercizioGiorno.id}_${s.numeroSerie}`]
+    const b = bozze[chiave(s.esercizioGiorno.id, s.numeroSerie, s.lato || null)]
     if (b) { b.rip = s.ripetizioniEffettuate; b.car = s.caricoEffettivo; b.toccato = true } // si riparte dai valori da correggere
     if (eraUltima) ferma()
   } catch (e) { errore(e) } finally { occupato.value = false }
 }
 
 async function termina() {
-  if (!await conferma("Confermi di voler terminare l'allenamento?", { etichetta: 'Termina', pericolo: false })) return
+  const mancano = Math.max(0, serieTotali.value - serie.value.length)
+  const testo = mancano
+    ? (mancano === 1 ? 'Manca 1 serie' : 'Mancano ' + mancano + ' serie') + ". Terminare comunque l'allenamento?"
+    : "Confermi di voler terminare l'allenamento?"
+  if (!await conferma(testo, { etichetta: 'Termina', pericolo: false })) return
   try {
     await api(`/allenamenti/${allenamento.value.id}/termina`, 'PUT')
     ferma()
@@ -171,13 +217,13 @@ onActivated(carica)
       </div>
       <p class="dim conteggio">{{ serie.length }} di {{ serieTotali }} serie</p>
 
-      <RestPanel />
+      <RestPanel :mostra-uni="haUnilaterali" />
 
       <p v-if="!esercizi.length" class="card vuoto">Questo giorno non ha esercizi. Aggiungili da Schede.</p>
-      <ExerciseCard v-for="eg in esercizi" :key="eg.id" :eg="eg" :serie="serie" :bozze="bozze"
+      <ExerciseCard v-for="eg in esercizi" :key="eg.id" :eg="eg" :serie="serie" :bozze="bozze" :ultima="ultima[eg.id]"
                     :passo-kg="passoKg" :occupato="occupato" @spunta="spunta" @annulla="annulla" />
 
-      <button class="btn btn-pericolo btn-blocco termina" @click="termina">Termina allenamento</button>
+      <button id="btn-termina" class="btn btn-pericolo btn-blocco termina" @click="termina">Termina allenamento</button>
     </template>
   </section>
 </template>

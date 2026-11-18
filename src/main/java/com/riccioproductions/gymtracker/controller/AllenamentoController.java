@@ -45,7 +45,8 @@ public class AllenamentoController {
                 toLong(body.get("esercizioGiornoId")),
                 toInt(body.get("numeroSerie")),
                 toInt(body.get("ripetizioniEffettuate")),
-                toDouble(body.get("caricoEffettivo"))); // il carico può essere null
+                toDouble(body.get("caricoEffettivo")), // il carico può essere null
+                toStr(body.get("lato"))); // "SX"/"DX" per gli unilaterali, altrimenti null
     }
 
     //Corregge ripetizioni/carico di una serie già registrata.
@@ -89,4 +90,5 @@ public class AllenamentoController {
     private static Long toLong(Object o) { return vuoto(o) ? null : Long.valueOf(o.toString()); }
     private static Integer toInt(Object o) { return vuoto(o) ? null : Integer.valueOf(o.toString()); }
     private static Double toDouble(Object o) { return vuoto(o) ? null : Double.valueOf(o.toString()); }
+    private static String toStr(Object o) { return vuoto(o) ? null : o.toString().trim(); }
 }

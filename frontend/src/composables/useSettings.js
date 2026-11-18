@@ -20,3 +20,7 @@ watch(accento, v => {
   document.documentElement.style.setProperty('--accent', a.c)
   document.documentElement.style.setProperty('--accent-ink', a.ink)
 }, { immediate: true })
+
+// Storico: true = per gli esercizi unilaterali mostra solo il lato più debole; false = mostra SX e DX
+export const storicoSoloMinimo = ref(ls.get('gt_storico_min', true))
+watch(storicoSoloMinimo, v => ls.set('gt_storico_min', v))

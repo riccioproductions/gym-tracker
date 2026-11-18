@@ -25,6 +25,10 @@ public class SerieEseguita {
     private String nomeEsercizio;
 
     private Integer numeroSerie;
+
+    // "SX" / "DX" per gli esercizi unilaterali, null per gli altri
+    @Column(length = 2)
+    private String lato;
     private Integer ripetizioniEffettuate;
     private Double caricoEffettivo;
     private LocalDateTime timestampCompletamento;

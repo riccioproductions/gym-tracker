@@ -20,6 +20,8 @@ export const rimanenti = computed(() => (fine.value ? Math.max(0, Math.ceil((fin
 export const progresso = computed(() => (inCorso.value ? Math.min(1, 1 - rimanenti.value / Math.max(1, totale.value)) : 0))
 
 watch(durata, v => ls.set(K_DURATA, v))
+export const durataUnilaterale = ref(Number(ls.get('gt_recupero_durata_uni', 90))) // recupero dopo ogni sottoserie SX/DX
+watch(durataUnilaterale, v => ls.set('gt_recupero_durata_uni', v))
 export const allarmeAttivo = ref(ls.get('gt_allarme_app', true))   // suono + vibrazione in app
 export const notificaAttiva = ref(ls.get('gt_notifica', true))     // notifica di sistema
 
@@ -29,6 +31,10 @@ watch(notificaAttiva, v => ls.set('gt_notifica', v))
 
 export function imposta(secondi) {
   durata.value = Math.min(900, Math.max(15, secondi))
+}
+
+export function impostaUnilaterale(secondi) {
+  durataUnilaterale.value = Math.min(900, Math.max(15, secondi))
 }
 
 export function avvia(secondi = durata.value, fineForzata = null) {
@@ -59,9 +65,11 @@ export function ripristina(serie) {
   let ripresa = salvato && salvato.fine > Date.now() ? salvato : null
   if (!ripresa && serie?.length) {
     const stop = salvato?.stop ?? 0
-    const ultima = Math.max(...serie.map(s => new Date(s.timestampCompletamento).getTime()))
-    const t = ultima + durata.value * 1000
-    if (ultima > stop && t > Date.now()) ripresa = { fine: t, totale: durata.value }
+    const ultimaSerie = serie.reduce((a, b) => (new Date(b.timestampCompletamento) > new Date(a.timestampCompletamento) ? b : a))
+    const ultima = new Date(ultimaSerie.timestampCompletamento).getTime()
+    const dur = ultimaSerie.lato ? durataUnilaterale.value : durata.value
+    const t = ultima + dur * 1000
+    if (ultima > stop && t > Date.now()) ripresa = { fine: t, totale: dur }
   }
   if (ripresa) avvia(ripresa.totale, ripresa.fine)
 }

@@ -11,7 +11,7 @@ const emit = defineEmits(['chiudi'])
 
 const catalogo = ref([])
 const lista = ref([])
-const vuotoForm = () => ({ aperto: false, id: null, esercizioId: '', serie: null, rip: null, carico: null, note: '', ordine: null })
+const vuotoForm = () => ({ aperto: false, id: null, esercizioId: '', serie: null, rip: null, carico: null, note: '', ordine: null, unilaterale: false })
 const form = reactive(vuotoForm())
 
 watch(() => props.giorno, async g => {
@@ -30,7 +30,7 @@ async function carica() {
 function apriForm(eg = null) {
   Object.assign(form, vuotoForm(), eg ? {
     id: eg.id, esercizioId: eg.esercizio.id, serie: eg.serie, rip: eg.ripetizioniTarget,
-    carico: eg.carico, note: eg.note ?? '', ordine: eg.ordine
+    carico: eg.carico, note: eg.note ?? '', ordine: eg.ordine, unilaterale: !!eg.unilaterale
   } : {}, { aperto: true })
 }
 const chiudiForm = () => Object.assign(form, vuotoForm())
@@ -40,6 +40,7 @@ async function salva() {
   const dato = {
     serie: form.serie ?? null, ripetizioniTarget: form.rip ?? null, carico: form.carico ?? null,
     note: form.note.trim() || null,
+    unilaterale: form.unilaterale,
     ordine: form.id ? form.ordine : lista.value.length + 1 // l'ordine va sempre inviato, altrimenti si azzera
   }
   try {
@@ -66,7 +67,7 @@ async function sposta(i, delta) {
   try {
     await Promise.all(l.map((eg, idx) => eg.ordine === idx + 1 ? null
       : api(`/giorni/${props.giorno.id}/esercizi/${eg.id}/${eg.esercizio.id}`, 'PUT', {
-          serie: eg.serie, ripetizioniTarget: eg.ripetizioniTarget, carico: eg.carico, note: eg.note, ordine: idx + 1
+          serie: eg.serie, ripetizioniTarget: eg.ripetizioniTarget, carico: eg.carico, note: eg.note, ordine: idx + 1, unilaterale: !!eg.unilaterale
         })))
     await carica()
   } catch (e) { errore(e) }
@@ -81,6 +82,7 @@ async function sposta(i, delta) {
         <div class="riga-testo">
           <strong>{{ eg.esercizio.nome }}</strong>
           <span class="dim num">{{ eg.serie ?? '-' }} × {{ eg.ripetizioniTarget ?? '-' }} · {{ eg.carico ?? '-' }} kg</span>
+          <span v-if="eg.unilaterale" class="tag">Unilaterale</span>
           <span v-if="eg.note" class="dim">{{ eg.note }}</span>
         </div>
         <div class="riga-azioni">
@@ -111,6 +113,7 @@ async function sposta(i, delta) {
       <Stepper v-model="form.carico" etichetta="Carico (kg)" :step="passoKg" decimale />
     </div>
     <label class="campo"><span>Note (facoltative)</span><input v-model="form.note"></label>
+    <label class="interruttore campo"><input type="checkbox" v-model="form.unilaterale"><span>Esercizio unilaterale (serie separate per SX e DX)</span></label>
     <template #piede>
       <button class="btn btn-ghost" @click="chiudiForm">Annulla</button>
       <button class="btn btn-primario" @click="salva">Salva</button>
