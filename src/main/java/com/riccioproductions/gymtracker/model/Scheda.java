@@ -1,5 +1,6 @@
 package com.riccioproductions.gymtracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
@@ -20,6 +21,11 @@ public class Scheda {
     private String descrizione;
 
     private LocalDate dataCreazione = LocalDate.now();
+
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "utente_id")
+    private Utente utente;
 
     @OneToMany(mappedBy = "scheda", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Giorno> giorni = new ArrayList<>();

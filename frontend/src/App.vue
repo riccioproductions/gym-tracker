@@ -1,7 +1,12 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { toasts, confermaStato, chiudiConferma } from './composables/useUi'
 import Modal from './components/Modal.vue'
 import RestDock from './components/RestDock.vue'
+
+const route = useRoute()
+const senzaNav = computed(() => route.path === '/login') // al login la barra di navigazione non serve
 
 const voci = [
   { to: '/allenamento', nome: 'Allenamento', icona: '<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>' },
@@ -13,8 +18,8 @@ const voci = [
 </script>
 
 <template>
-  <div class="shell">
-    <nav class="nav" aria-label="Navigazione principale">
+  <div class="shell" :style="senzaNav ? { display: 'block' } : null">
+    <nav v-if="!senzaNav" class="nav" aria-label="Navigazione principale">
       <RouterLink v-for="v in voci" :key="v.to" :to="v.to">
         <svg viewBox="0 0 24 24" aria-hidden="true" v-html="v.icona"></svg>
         <span>{{ v.nome }}</span>

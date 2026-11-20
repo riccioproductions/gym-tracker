@@ -1,6 +1,7 @@
 <script setup>
 import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo } from '../composables/useSettings'
 import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
+import { nomeUtente, esci } from '../composables/useAuth'
 import { mmss } from '../utils'
 import { api } from '../api'
 import { toast, errore } from '../composables/useUi'
@@ -28,6 +29,12 @@ async function scaricaBackup() {
 <template>
   <section>
     <header class="titolo-pagina"><h1>Impostazioni</h1></header>
+
+    <div class="card">
+      <h3>Account</h3>
+      <p class="dim spiegazione">Sei collegato come <strong>{{ nomeUtente }}</strong>.</p>
+      <button class="btn btn-pericolo" @click="esci">Esci</button>
+    </div>
 
     <div class="card">
       <h3>Passo del peso</h3>
@@ -67,7 +74,7 @@ async function scaricaBackup() {
     </div>
     <div class="card">
       <h3>Backup dei dati</h3>
-      <p class="dim spiegazione">Scarica un file con schede, esercizi e tutto lo storico degli allenamenti.</p>
+      <p class="dim spiegazione">Scarica un file con le tue schede, i tuoi esercizi e tutto il tuo storico degli allenamenti.</p>
       <button class="btn btn-primario" @click="scaricaBackup">Scarica backup</button>
     </div>
   </section>

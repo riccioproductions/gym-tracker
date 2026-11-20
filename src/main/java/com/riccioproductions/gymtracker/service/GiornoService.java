@@ -4,6 +4,7 @@ import com.riccioproductions.gymtracker.model.Giorno;
 import com.riccioproductions.gymtracker.model.Scheda;
 import com.riccioproductions.gymtracker.repository.GiornoRepository;
 import org.springframework.stereotype.Service;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -17,27 +18,34 @@ public class GiornoService {
         this.schedaService = schedaService;
     }
 
-    public List<Giorno> trovaPerScheda(Long schedaId) {
+    public List<Giorno> trovaPerScheda(Long schedaId, Long utenteId) {
+        schedaService.trovaPerId(schedaId, utenteId); // verifica che la scheda sia dell'utente
         return repository.findBySchedaIdOrderByOrdineAsc(schedaId);
     }
 
-    public Giorno salva(Long schedaId, Giorno giorno) {
-    Scheda scheda = schedaService.trovaPerId(schedaId);
-
-    if (giorno.getId() != null) {
-        Giorno esistente = repository.findById(giorno.getId())
-                .orElseThrow(() -> new RuntimeException("Giorno non trovato: " + giorno.getId()));
-        esistente.setNome(giorno.getNome());
-        esistente.setOrdine(giorno.getOrdine());
-        esistente.setScheda(scheda);
-        return repository.save(esistente);
+    public Giorno trovaPerId(Long id, Long utenteId) {
+        return repository.findByIdAndSchedaUtenteId(id, utenteId)
+                .orElseThrow(() -> new RuntimeException("Giorno non trovato: " + id));
     }
 
-    giorno.setScheda(scheda);
-    return repository.save(giorno);
-}
+    public Giorno salva(Long utenteId, Long schedaId, Giorno giorno) {
+        Scheda scheda = schedaService.trovaPerId(schedaId, utenteId);
 
-    public void elimina(Long id) {
+        if (giorno.getId() != null) {
+            Giorno esistente = trovaPerId(giorno.getId(), utenteId);
+            esistente.setNome(giorno.getNome());
+            esistente.setOrdine(giorno.getOrdine());
+            esistente.setScheda(scheda);
+            return repository.save(esistente);
+        }
+
+        giorno.setScheda(scheda);
+        giorno.setEsercizi(new ArrayList<>());
+        return repository.save(giorno);
+    }
+
+    public void elimina(Long id, Long utenteId) {
+        trovaPerId(id, utenteId);
         repository.deleteById(id);
     }
 }

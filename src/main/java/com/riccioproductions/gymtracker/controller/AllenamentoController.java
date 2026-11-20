@@ -2,7 +2,9 @@ package com.riccioproductions.gymtracker.controller;
 
 import com.riccioproductions.gymtracker.model.Allenamento;
 import com.riccioproductions.gymtracker.model.SerieEseguita;
+import com.riccioproductions.gymtracker.model.Utente;
 import com.riccioproductions.gymtracker.service.AllenamentoService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +12,6 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/allenamenti")
-@CrossOrigin(origins = "*")
 public class AllenamentoController {
 
     private final AllenamentoService service;
@@ -20,28 +21,29 @@ public class AllenamentoController {
     }
 
     @GetMapping("/in-corso")
-    public Optional<Allenamento> inCorso() {
-        return service.trovaInCorso();
+    public Optional<Allenamento> inCorso(@AuthenticationPrincipal Utente utente) {
+        return service.trovaInCorso(utente.getId());
     }
 
     @PostMapping("/avvia/{giornoId}")
-    public Allenamento avvia(@PathVariable Long giornoId) {
-        return service.avvia(giornoId);
+    public Allenamento avvia(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId) {
+        return service.avvia(utente.getId(), giornoId);
     }
 
     @GetMapping("/{id}")
-    public Allenamento dettaglio(@PathVariable Long id) {
-        return service.trovaPerId(id);
+    public Allenamento dettaglio(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        return service.trovaPerId(id, utente.getId());
     }
 
     @GetMapping("/{id}/serie")
-    public List<SerieEseguita> serie(@PathVariable Long id) {
-        return service.serieDiAllenamento(id);
+    public List<SerieEseguita> serie(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        return service.serieDiAllenamento(utente.getId(), id);
     }
 
     @PostMapping("/{id}/serie")
-    public SerieEseguita registraSerie(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        return service.registraSerie(id,
+    public SerieEseguita registraSerie(@AuthenticationPrincipal Utente utente, @PathVariable Long id,
+                                       @RequestBody Map<String, Object> body) {
+        return service.registraSerie(utente.getId(), id,
                 toLong(body.get("esercizioGiornoId")),
                 toInt(body.get("numeroSerie")),
                 toInt(body.get("ripetizioniEffettuate")),
@@ -51,37 +53,38 @@ public class AllenamentoController {
 
     //Corregge ripetizioni/carico di una serie già registrata.
     @PutMapping("/{id}/serie/{serieId}")
-    public SerieEseguita modificaSerie(@PathVariable Long id, @PathVariable Long serieId,
-                                       @RequestBody Map<String, Object> body) {
-        return service.modificaSerie(id, serieId,
+    public SerieEseguita modificaSerie(@AuthenticationPrincipal Utente utente, @PathVariable Long id,
+                                       @PathVariable Long serieId, @RequestBody Map<String, Object> body) {
+        return service.modificaSerie(utente.getId(), id, serieId,
                 toInt(body.get("ripetizioniEffettuate")),
                 toDouble(body.get("caricoEffettivo")));
     }
 
     //Toglie la spunta a una serie.
     @DeleteMapping("/{id}/serie/{serieId}")
-    public void eliminaSerie(@PathVariable Long id, @PathVariable Long serieId) {
-        service.eliminaSerie(id, serieId);
+    public void eliminaSerie(@AuthenticationPrincipal Utente utente, @PathVariable Long id, @PathVariable Long serieId) {
+        service.eliminaSerie(utente.getId(), id, serieId);
     }
 
     @PutMapping("/{id}/termina")
-    public Allenamento termina(@PathVariable Long id) {
-        return service.termina(id);
+    public Allenamento termina(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        return service.termina(utente.getId(), id);
     }
 
     @GetMapping("/storico/giorno/{giornoId}")
-    public List<Allenamento> storico(@PathVariable Long giornoId) {
-        return service.storicoPerGiorno(giornoId);
+    public List<Allenamento> storico(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId) {
+        return service.storicoPerGiorno(utente.getId(), giornoId);
     }
 
     @DeleteMapping("/{id}")
-    public void elimina(@PathVariable Long id) {
-        service.elimina(id);
+    public void elimina(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        service.elimina(utente.getId(), id);
     }
 
     @GetMapping("/recenti")
-    public List<Allenamento> recenti(@RequestParam(defaultValue = "8") int limite) {
-        return service.recenti(limite);
+    public List<Allenamento> recenti(@AuthenticationPrincipal Utente utente,
+                                     @RequestParam(defaultValue = "8") int limite) {
+        return service.recenti(utente.getId(), limite);
     }
 
     private static boolean vuoto(Object o) {

@@ -1,13 +1,14 @@
 package com.riccioproductions.gymtracker.controller;
 
 import com.riccioproductions.gymtracker.model.EsercizioGiorno;
+import com.riccioproductions.gymtracker.model.Utente;
 import com.riccioproductions.gymtracker.service.EsercizioGiornoService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/giorni/{giornoId}/esercizi")
-@CrossOrigin(origins = "*")
 public class EsercizioGiornoController {
 
     private final EsercizioGiornoService service;
@@ -17,25 +18,27 @@ public class EsercizioGiornoController {
     }
 
     @GetMapping
-    public List<EsercizioGiorno> perGiorno(@PathVariable Long giornoId) {
-        return service.trovaPerGiorno(giornoId);
+    public List<EsercizioGiorno> perGiorno(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId) {
+        return service.trovaPerGiorno(giornoId, utente.getId());
     }
 
     @PostMapping("/{esercizioId}")
-    public EsercizioGiorno crea(@PathVariable Long giornoId, @PathVariable Long esercizioId,
-                                 @RequestBody EsercizioGiorno eg) {
-        return service.salva(giornoId, esercizioId, eg);
+    public EsercizioGiorno crea(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId,
+                                @PathVariable Long esercizioId, @RequestBody EsercizioGiorno eg) {
+        eg.setId(null); // senza questo, un id nel corpo sovrascriverebbe una riga esistente
+        return service.salva(utente.getId(), giornoId, esercizioId, eg);
     }
 
     @PutMapping("/{id}/{esercizioId}")
-    public EsercizioGiorno modifica(@PathVariable Long giornoId, @PathVariable Long id,
-                                     @PathVariable Long esercizioId, @RequestBody EsercizioGiorno eg) {
+    public EsercizioGiorno modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId,
+                                    @PathVariable Long id, @PathVariable Long esercizioId,
+                                    @RequestBody EsercizioGiorno eg) {
         eg.setId(id);
-        return service.salva(giornoId, esercizioId, eg);
+        return service.salva(utente.getId(), giornoId, esercizioId, eg);
     }
 
     @DeleteMapping("/{id}")
-    public void elimina(@PathVariable Long id) {
-        service.elimina(id);
+    public void elimina(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        service.elimina(id, utente.getId());
     }
 }

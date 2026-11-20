@@ -1,13 +1,14 @@
 package com.riccioproductions.gymtracker.controller;
 
 import com.riccioproductions.gymtracker.model.Scheda;
+import com.riccioproductions.gymtracker.model.Utente;
 import com.riccioproductions.gymtracker.service.SchedaService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/schede")
-@CrossOrigin(origins = "*")
 public class SchedaController {
 
     private final SchedaService service;
@@ -17,28 +18,29 @@ public class SchedaController {
     }
 
     @GetMapping
-    public List<Scheda> tutte() {
-        return service.trovaTutte();
+    public List<Scheda> tutte(@AuthenticationPrincipal Utente utente) {
+        return service.trovaTutte(utente.getId());
     }
 
     @GetMapping("/{id}")
-    public Scheda unaSingola(@PathVariable Long id) {
-        return service.trovaPerId(id);
+    public Scheda unaSingola(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        return service.trovaPerId(id, utente.getId());
     }
 
     @PostMapping
-    public Scheda crea(@RequestBody Scheda scheda) {
-        return service.salva(scheda);
+    public Scheda crea(@AuthenticationPrincipal Utente utente, @RequestBody Scheda scheda) {
+        scheda.setId(null); // in creazione l'id non può arrivare dal client
+        return service.salva(utente.getId(), scheda);
     }
 
     @PutMapping("/{id}")
-	public Scheda modifica(@PathVariable Long id, @RequestBody Scheda scheda) {
-		scheda.setId(id);
-		return service.salva(scheda);
-	}
+    public Scheda modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long id, @RequestBody Scheda scheda) {
+        scheda.setId(id);
+        return service.salva(utente.getId(), scheda);
+    }
 
     @DeleteMapping("/{id}")
-    public void elimina(@PathVariable Long id) {
-        service.elimina(id);
+    public void elimina(@AuthenticationPrincipal Utente utente, @PathVariable Long id) {
+        service.elimina(id, utente.getId());
     }
 }

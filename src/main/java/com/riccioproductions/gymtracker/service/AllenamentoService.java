@@ -17,47 +17,53 @@ public class AllenamentoService {
     private final GiornoRepository giornoRepository;
     private final SerieEseguitaRepository serieRepository;
     private final EsercizioGiornoRepository esercizioGiornoRepository;
+    private final UtenteRepository utenteRepository;
 
     public AllenamentoService(AllenamentoRepository allenamentoRepository,
                               GiornoRepository giornoRepository,
                               SerieEseguitaRepository serieRepository,
-                              EsercizioGiornoRepository esercizioGiornoRepository) {
+                              EsercizioGiornoRepository esercizioGiornoRepository,
+                              UtenteRepository utenteRepository) {
         this.allenamentoRepository = allenamentoRepository;
         this.giornoRepository = giornoRepository;
         this.serieRepository = serieRepository;
         this.esercizioGiornoRepository = esercizioGiornoRepository;
+        this.utenteRepository = utenteRepository;
     }
 
-    public Optional<Allenamento> trovaInCorso() {
-        return allenamentoRepository.findFirstByStatoOrderByDataInizioDesc(StatoAllenamento.IN_CORSO);
+    public Optional<Allenamento> trovaInCorso(Long utenteId) {
+        return allenamentoRepository.findFirstByUtenteIdAndStatoOrderByDataInizioDesc(utenteId, StatoAllenamento.IN_CORSO);
     }
 
-    public Allenamento avvia(Long giornoId) {
-        trovaInCorso().ifPresent(a -> {
+    public Allenamento avvia(Long utenteId, Long giornoId) {
+        trovaInCorso(utenteId).ifPresent(a -> {
             throw new RuntimeException("C'è già un allenamento in corso (id=" + a.getId() + ")");
         });
 
-        Giorno giorno = giornoRepository.findById(giornoId)
+        Giorno giorno = giornoRepository.findByIdAndSchedaUtenteId(giornoId, utenteId)
                 .orElseThrow(() -> new RuntimeException("Giorno non trovato: " + giornoId));
 
         Allenamento allenamento = new Allenamento();
+        allenamento.setUtente(utenteRepository.getReferenceById(utenteId));
         allenamento.setGiorno(giorno);
         allenamento.setDataInizio(LocalDateTime.now());
         allenamento.setStato(StatoAllenamento.IN_CORSO);
         return allenamentoRepository.save(allenamento);
     }
 
-    public SerieEseguita registraSerie(Long allenamentoId, Long esercizioGiornoId,
+    public SerieEseguita registraSerie(Long utenteId, Long allenamentoId, Long esercizioGiornoId,
                                        Integer numeroSerie, Integer ripetizioniEffettuate,
                                        Double caricoEffettivo, String lato) {
         if (esercizioGiornoId == null || numeroSerie == null || ripetizioniEffettuate == null) {
             throw new RuntimeException("Dati della serie incompleti");
         }
-        Allenamento allenamento = allenamentoRepository.findById(allenamentoId)
-                .orElseThrow(() -> new RuntimeException("Allenamento non trovato: " + allenamentoId));
+        Allenamento allenamento = trovaPerId(allenamentoId, utenteId);
 
-        EsercizioGiorno eg = esercizioGiornoRepository.findById(esercizioGiornoId)
+        EsercizioGiorno eg = esercizioGiornoRepository.findByIdAndGiornoSchedaUtenteId(esercizioGiornoId, utenteId)
                 .orElseThrow(() -> new RuntimeException("EsercizioGiorno non trovato: " + esercizioGiornoId));
+        if (!eg.getGiorno().getId().equals(allenamento.getGiorno().getId())) {
+            throw new RuntimeException("L'esercizio non appartiene al giorno di questo allenamento");
+        }
 
         String latoNorm = (lato == null || lato.isBlank()) ? null : lato.trim().toUpperCase();
         if (latoNorm != null && !latoNorm.equals("SX") && !latoNorm.equals("DX")) {
@@ -87,20 +93,21 @@ public class AllenamentoService {
     }
 
     @Transactional
-    public void eliminaSerie(Long allenamentoId, Long serieId) {
-        serieRepository.delete(trovaSerie(allenamentoId, serieId));
+    public void eliminaSerie(Long utenteId, Long allenamentoId, Long serieId) {
+        serieRepository.delete(trovaSerie(utenteId, allenamentoId, serieId));
     }
 
     @Transactional
-    public SerieEseguita modificaSerie(Long allenamentoId, Long serieId,
+    public SerieEseguita modificaSerie(Long utenteId, Long allenamentoId, Long serieId,
                                        Integer ripetizioni, Double carico) {
-        SerieEseguita s = trovaSerie(allenamentoId, serieId);
+        SerieEseguita s = trovaSerie(utenteId, allenamentoId, serieId);
         if (ripetizioni != null) s.setRipetizioniEffettuate(ripetizioni);
         s.setCaricoEffettivo(carico);
         return serieRepository.save(s);
     }
 
-    private SerieEseguita trovaSerie(Long allenamentoId, Long serieId) {
+    private SerieEseguita trovaSerie(Long utenteId, Long allenamentoId, Long serieId) {
+        trovaPerId(allenamentoId, utenteId); // l'allenamento deve essere dell'utente
         SerieEseguita s = serieRepository.findById(serieId)
                 .orElseThrow(() -> new RuntimeException("Serie non trovata: " + serieId));
         if (!s.getAllenamento().getId().equals(allenamentoId)) {
@@ -109,32 +116,33 @@ public class AllenamentoService {
         return s;
     }
 
-    public Allenamento termina(Long allenamentoId) {
-        Allenamento allenamento = allenamentoRepository.findById(allenamentoId)
-                .orElseThrow(() -> new RuntimeException("Allenamento non trovato: " + allenamentoId));
+    public Allenamento termina(Long utenteId, Long allenamentoId) {
+        Allenamento allenamento = trovaPerId(allenamentoId, utenteId);
         allenamento.setDataFine(LocalDateTime.now());
         allenamento.setStato(StatoAllenamento.COMPLETATO);
         return allenamentoRepository.save(allenamento);
     }
 
-    public Allenamento trovaPerId(Long id) {
-        return allenamentoRepository.findById(id)
+    public Allenamento trovaPerId(Long id, Long utenteId) {
+        return allenamentoRepository.findByIdAndUtenteId(id, utenteId)
                 .orElseThrow(() -> new RuntimeException("Allenamento non trovato: " + id));
     }
 
-    public List<SerieEseguita> serieDiAllenamento(Long allenamentoId) {
+    public List<SerieEseguita> serieDiAllenamento(Long utenteId, Long allenamentoId) {
+        trovaPerId(allenamentoId, utenteId);
         return serieRepository.findByAllenamentoId(allenamentoId);
     }
 
-    public List<Allenamento> storicoPerGiorno(Long giornoId) {
-        return allenamentoRepository.findByGiornoIdOrderByDataInizioDesc(giornoId);
+    public List<Allenamento> storicoPerGiorno(Long utenteId, Long giornoId) {
+        return allenamentoRepository.findByUtenteIdAndGiornoIdOrderByDataInizioDesc(utenteId, giornoId);
     }
 
-    public void elimina(Long id) {
+    public void elimina(Long utenteId, Long id) {
+        trovaPerId(id, utenteId);
         allenamentoRepository.deleteById(id);
     }
 
-    public List<Allenamento> recenti(int limite) {
-        return allenamentoRepository.findAllByOrderByDataInizioDesc(PageRequest.of(0, limite));
+    public List<Allenamento> recenti(Long utenteId, int limite) {
+        return allenamentoRepository.findByUtenteIdOrderByDataInizioDesc(utenteId, PageRequest.of(0, limite));
     }
 }
