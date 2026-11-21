@@ -4,7 +4,7 @@ import { ls } from '../utils'
 const K_TOKEN = 'gt_token'
 const K_UTENTE = 'gt_utente'
 // Dati legati all'utente: vanno tolti all'uscita, così il prossimo che entra da questo dispositivo non li eredita
-const K_DA_PULIRE = [K_TOKEN, K_UTENTE, 'gt_recupero_fine', 'gt_scheda']
+const K_DA_PULIRE = [K_TOKEN, K_UTENTE, 'gt_recupero_fine', 'gt_scheda', 'gt_extra', 'gt_push', 'gt_push_endpoint']
 
 export const token = ref(ls.get(K_TOKEN, null))
 export const nomeUtente = ref(ls.get(K_UTENTE, ''))
@@ -20,6 +20,17 @@ export function entra(t, username) {
 }
 
 export function esci() {
+  // Il dispositivo smette di ricevere le notifiche di questo utente (keepalive: la richiesta parte anche col reload)
+  try {
+    const endpoint = ls.get('gt_push_endpoint', null)
+    if (endpoint && token.value) {
+      fetch((import.meta.env.VITE_API_BASE || '/api') + '/push/sottoscrizione', {
+        method: 'DELETE', keepalive: true,
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token.value}` },
+        body: JSON.stringify({ endpoint })
+      }).catch(() => {})
+    }
+  } catch { /* non bloccante */ }
   for (const k of K_DA_PULIRE) { try { localStorage.removeItem(k) } catch { /* storage non disponibile */ } }
   token.value = null
   nomeUtente.value = ''

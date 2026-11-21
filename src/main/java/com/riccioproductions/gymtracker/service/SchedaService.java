@@ -18,8 +18,9 @@ public class SchedaService {
         this.utenteRepository = utenteRepository;
     }
 
+    // L'ultima scheda inserita per prima
     public List<Scheda> trovaTutte(Long utenteId) {
-        return repository.findByUtenteIdOrderByIdAsc(utenteId);
+        return repository.findByUtenteIdOrderByIdDesc(utenteId);
     }
 
     // Una scheda di un altro utente risponde come se non esistesse

@@ -2,9 +2,10 @@
 import { ref, reactive, computed, watch, nextTick, onActivated } from 'vue'
 import { api } from '../api'
 import { now } from '../composables/useNow'
-import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, chiediNotifiche, durataUnilaterale } from '../composables/useRestTimer'
+import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, notificaAttiva, durataUnilaterale } from '../composables/useRestTimer'
+import { attivaPush, assicuraPush, pushAttivo } from '../composables/usePush'
 import { toast, errore, conferma } from '../composables/useUi'
-import { ls, hhmmss, compatta } from '../utils'
+import { ls, hhmmss, dataIt, compatta } from '../utils'
 import { passoKg } from '../composables/useSettings'
 import ExerciseCard from '../components/ExerciseCard.vue'
 import RestPanel from '../components/RestPanel.vue'
@@ -19,13 +20,23 @@ const giornoId = ref('')
 const esercizi = ref([])          // EsercizioGiorno del giorno in corso
 const serie = ref([])             // serie già registrate
 const bozze = reactive({})        // valori in digitazione, per "esercizioGiorno_numeroSerie"
+const extra = reactive({})        // serie aggiuntive di questo allenamento: { [esercizioGiornoId]: n }
+const ultimo = ref(null)          // ultimo allenamento eseguito (mostrato prima di iniziarne uno)
 let ripristinatoPer = null
 
 const lati = eg => (eg.unilaterale ? ['SX', 'DX'] : [null])   // un esercizio unilaterale ha una sottoserie per lato
 const chiave = (egId, n, lato) => `${egId}_${n}${lato ? '_' + lato : ''}`
-const haUnilaterali = computed(() => esercizi.value.some(e => e.unilaterale))
 const ultima = ref({})   // sessione precedente dello stesso giorno: { [esercizioGiornoId]: ['8×20', ...] }
-const eCompleto = eg => serie.value.filter(s => s.esercizioGiorno.id === eg.id).length >= (eg.serie || 1) * lati(eg).length
+
+// Numero di serie di un esercizio: quelle in scheda + le aggiuntive (mai meno di quelle già registrate)
+const totaleSerie = eg => {
+  const fatte = serie.value.filter(s => s.esercizioGiorno.id === eg.id).map(s => s.numeroSerie)
+  return Math.max((eg.serie || 1) + (extra[eg.id] || 0), ...fatte)
+}
+const eCompleto = eg => serie.value.filter(s => s.esercizioGiorno.id === eg.id).length >= totaleSerie(eg) * lati(eg).length
+// L'ultima serie aggiuntiva si può togliere solo se non è ancora stata registrata
+const rimovibile = eg => (extra[eg.id] || 0) > 0
+  && !serie.value.some(s => s.esercizioGiorno.id === eg.id && s.numeroSerie === totaleSerie(eg))
 
 watch(schedaId, async v => {
   giornoId.value = ''
@@ -35,8 +46,40 @@ watch(schedaId, async v => {
 
 const trascorso = computed(() => allenamento.value
   ? Math.max(0, Math.floor((now.value - new Date(allenamento.value.dataInizio)) / 1000)) : 0)
-const serieTotali = computed(() => esercizi.value.reduce((t, eg) => t + (eg.serie || 1) * lati(eg).length, 0))
+const serieTotali = computed(() => esercizi.value.reduce((t, eg) => t + totaleSerie(eg) * lati(eg).length, 0))
 const percentuale = computed(() => serieTotali.value ? Math.min(100, (serie.value.length / serieTotali.value) * 100) : 0)
+
+// ---- serie aggiuntive (salvate sul dispositivo, legate a questo allenamento) ----
+function salvaExtra() {
+  ls.set('gt_extra', { allenamento: allenamento.value.id, extra: { ...extra } })
+}
+function caricaExtra() {
+  Object.keys(extra).forEach(k => delete extra[k])
+  const s = ls.get('gt_extra', null)
+  if (s && s.allenamento === allenamento.value.id) Object.assign(extra, s.extra)
+}
+function creaBozze(e) {
+  for (let n = 1; n <= totaleSerie(e); n++) {
+    for (const lato of lati(e)) {
+      const k = chiave(e.id, n, lato)
+      if (bozze[k]) continue
+      const prec = bozze[chiave(e.id, n - 1, lato)] // la nuova serie parte dai valori della precedente
+      bozze[k] = { rip: prec ? prec.rip : (e.ripetizioniTarget ?? null), car: prec ? prec.car : (e.carico ?? null), toccato: false }
+    }
+  }
+}
+function aggiungiSerie(eg) {
+  extra[eg.id] = (extra[eg.id] || 0) + 1
+  creaBozze(eg)
+  salvaExtra()
+}
+function togliSerie(eg) {
+  const n = totaleSerie(eg)
+  extra[eg.id] -= 1
+  if (extra[eg.id] <= 0) delete extra[eg.id]
+  for (const lato of lati(eg)) delete bozze[chiave(eg.id, n, lato)]
+  salvaExtra()
+}
 
 // ---- caricamento ----
 async function carica() {
@@ -44,13 +87,15 @@ async function carica() {
     const inCorso = await api('/allenamenti/in-corso')
     if (inCorso) {
       allenamento.value = inCorso
+      caricaExtra()
       await caricaEsercizi()
       caricaUltima() // senza await: non blocca la schermata
       if (ripristinatoPer !== inCorso.id) { ripristina(serie.value); ripristinatoPer = inCorso.id }
-      chiediNotifiche()
+      assicuraPush()
     } else {
       allenamento.value = null
       await caricaSchede()
+      caricaUltimo()
     }
   } catch (e) { errore(e) } finally { caricamento.value = false }
 }
@@ -64,6 +109,11 @@ async function caricaGiorni() {
   try { giorni.value = schedaId.value ? await api(`/schede/${schedaId.value}/giorni`) : [] } catch (e) { errore(e) }
 }
 
+// Ultimo allenamento eseguito: solo il giorno (es. "Pull B") e la data. Non bloccante.
+async function caricaUltimo() {
+  try { ultimo.value = (await api('/allenamenti/recenti?limite=1'))[0] ?? null } catch { ultimo.value = null }
+}
+
 async function caricaEsercizi() {
   const [eg, se] = await Promise.all([
     api(`/giorni/${allenamento.value.giorno.id}/esercizi`),
@@ -71,14 +121,7 @@ async function caricaEsercizi() {
   ])
   esercizi.value = eg
   serie.value = se
-  eg.forEach(e => {
-    for (let n = 1; n <= (e.serie || 1); n++) {
-      for (const lato of lati(e)) {
-        const k = chiave(e.id, n, lato)
-        if (!bozze[k]) bozze[k] = { rip: e.ripetizioniTarget ?? null, car: e.carico ?? null, toccato: false }
-      }
-    }
-  })
+  eg.forEach(creaBozze)
 }
 
 // "Ultima volta": serie dell'ultimo allenamento completato dello stesso giorno (per gli unilaterali, il lato più debole)
@@ -111,14 +154,16 @@ async function vaiAlProssimo(eg) {
 async function avvia() {
   if (!giornoId.value) return toast('Seleziona prima una scheda e un giorno.', 'errore')
   occupato.value = true
+  // Dentro il tocco su "Avvia": è il momento giusto per chiedere il permesso notifiche (solo se non ancora attive)
+  if (notificaAttiva.value && !pushAttivo.value) attivaPush()
   try {
     allenamento.value = await api(`/allenamenti/avvia/${giornoId.value}`, 'POST')
     Object.keys(bozze).forEach(k => delete bozze[k])
+    caricaExtra() // nuovo allenamento: nessuna serie aggiuntiva
     ferma()
     ripristinatoPer = allenamento.value.id
     caricaUltima()
     await caricaEsercizi()
-    chiediNotifiche()
   } catch (e) { errore(e) } finally { occupato.value = false }
 }
 
@@ -132,7 +177,7 @@ async function spunta(eg, n, lato = null) {
     })
     serie.value.push(nuova)
     // le serie successive non ancora toccate ereditano i valori appena confermati
-    for (let k = n + 1; k <= (eg.serie || 1); k++) {
+    for (let k = n + 1; k <= totaleSerie(eg); k++) {
       const nb = bozze[chiave(eg.id, k, lato)]
       if (nb && !nb.toccato) { nb.rip = b.rip; nb.car = b.car }
     }
@@ -173,7 +218,10 @@ async function termina() {
     allenamento.value = null
     esercizi.value = []; serie.value = []
     Object.keys(bozze).forEach(k => delete bozze[k])
+    Object.keys(extra).forEach(k => delete extra[k])
+    ls.set('gt_extra', null)
     await caricaSchede()
+    caricaUltimo()
   } catch (e) { errore(e) }
 }
 
@@ -187,6 +235,9 @@ onActivated(carica)
     <!-- Selezione scheda e giorno -->
     <template v-else-if="!allenamento">
       <header class="titolo-pagina"><h1>Allenamento</h1></header>
+      <p v-if="ultimo" class="dim spiegazione">
+        Ultimo allenamento eseguito: <strong>{{ ultimo.giorno.nome }}</strong> · {{ dataIt(ultimo.dataInizio) }}
+      </p>
       <div v-if="!schede.length" class="card vuoto">
         Non hai ancora nessuna scheda. <RouterLink to="/schede">Crea la prima scheda</RouterLink>
       </div>
@@ -217,11 +268,12 @@ onActivated(carica)
       </div>
       <p class="dim conteggio">{{ serie.length }} di {{ serieTotali }} serie</p>
 
-      <RestPanel :mostra-uni="haUnilaterali" />
+      <RestPanel />
 
       <p v-if="!esercizi.length" class="card vuoto">Questo giorno non ha esercizi. Aggiungili da Schede.</p>
       <ExerciseCard v-for="eg in esercizi" :key="eg.id" :eg="eg" :serie="serie" :bozze="bozze" :ultima="ultima[eg.id]"
-                    :passo-kg="passoKg" :occupato="occupato" @spunta="spunta" @annulla="annulla" />
+                    :passo-kg="passoKg" :occupato="occupato" :totale="totaleSerie(eg)" :rimovibile="rimovibile(eg)"
+                    @spunta="spunta" @annulla="annulla" @aggiungi="aggiungiSerie" @togli="togliSerie" />
 
       <button id="btn-termina" class="btn btn-pericolo btn-blocco termina" @click="termina">Termina allenamento</button>
     </template>

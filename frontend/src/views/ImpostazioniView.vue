@@ -1,12 +1,30 @@
 <script setup>
 import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo } from '../composables/useSettings'
-import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
+import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durata, imposta, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
 import { nomeUtente, esci } from '../composables/useAuth'
 import { mmss } from '../utils'
 import { api } from '../api'
 import { toast, errore } from '../composables/useUi'
 
+import { attivaPush, disattivaPush, pushAttivo, serveInstallazione, errorepush } from '../composables/usePush'
+
 const formatta = p => String(p).replace('.', ',')
+
+// Diagnostica: dice cosa non va, oppure invia una notifica di prova tra 10 secondi (da provare a schermo bloccato)
+async function provaPush() {
+  try {
+    const r = await api('/push/prova', 'POST')
+    if (!r.configurato) toast('Il server non ha le chiavi push configurate.', 'errore', 8000)
+    else if (!r.dispositivi) toast('Nessun dispositivo registrato: spegni e riaccendi la notifica di sistema.', 'errore', 8000)
+    else toast('Tutto ok: blocca lo schermo, la notifica arriva tra 10 secondi.', 'info', 8000)
+  } catch (e) { errore(e) }
+}
+
+// Attiva/disattiva la notifica di fine recupero anche a schermo spento (push dal server)
+async function cambiaNotifica(attiva) {
+  if (!attiva) return disattivaPush()
+  if (!await attivaPush()) toast(errorepush.value || 'Notifiche non attivate.', 'errore', 12000)
+}
 
 // Scarica schede, esercizi e storico in un unico file JSON
 async function scaricaBackup() {
@@ -54,8 +72,18 @@ async function scaricaBackup() {
     </div>
 
     <div class="card">
+      <h3>Recupero predefinito</h3>
+      <p class="dim spiegazione">Recupero dopo ogni serie degli esercizi normali. Durante l'allenamento si può ritoccare dal timer.</p>
+      <div class="recupero-riga" style="grid-template-columns: auto 1fr auto">
+        <button class="btn btn-sm" @click="imposta(durata - PASSO)" aria-label="Riduci recupero di 15 secondi">−{{ PASSO }}s</button>
+        <div class="recupero-tempo"><small>Recupero</small><strong class="num">{{ mmss(durata) }}</strong></div>
+        <button class="btn btn-sm" @click="imposta(durata + PASSO)" aria-label="Aumenta recupero di 15 secondi">+{{ PASSO }}s</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h3>Esercizi unilaterali</h3>
-      <p class="dim spiegazione">Recupero predefinito dopo ogni sottoserie (SX o DX). Durante l'allenamento si può ritoccare dal timer.</p>
+      <p class="dim spiegazione">Recupero predefinito dopo ogni sottoserie (SX o DX).</p>
       <div class="recupero-riga" style="grid-template-columns: auto 1fr auto; margin-bottom: 16px">
         <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale - PASSO)" aria-label="Riduci recupero unilaterali di 15 secondi">−{{ PASSO }}s</button>
         <div class="recupero-tempo"><small>Recupero unilaterali</small><strong class="num">{{ mmss(durataUnilaterale) }}</strong></div>
@@ -69,8 +97,13 @@ async function scaricaBackup() {
       <h3>Avviso di fine recupero</h3>
       <p class="dim spiegazione">Suono, popup a centro schermo e, dove supportata, vibrazione, ripetuti ogni 4 secondi finché non tocchi lo schermo. Prova l'avviso e regola il volume del telefono.</p>
       <label class="interruttore campo"><input type="checkbox" v-model="allarmeAttivo"><span>Allarme sonoro in app</span></label>
-      <label class="interruttore campo"><input type="checkbox" v-model="notificaAttiva" @change="notificaAttiva && chiediNotifiche()"><span>Notifica di sistema</span></label>
-      <button class="btn btn-primario" @click="provaSuono">Prova avviso</button>
+      <label class="interruttore campo"><input type="checkbox" v-model="notificaAttiva" @change="cambiaNotifica($event.target.checked)"><span>Notifica di sistema (anche a schermo spento)</span></label>
+      <p v-if="serveInstallazione" class="dim spiegazione">Su iPhone/iPad, per ricevere l'avviso a schermo spento: Condividi → Aggiungi alla schermata Home, apri l'app da lì e riattiva qui la notifica.</p>
+      <p v-else-if="notificaAttiva && pushAttivo" class="dim spiegazione">Attiva anche a schermo spento su questo dispositivo.</p>
+      <div class="riga-azioni">
+        <button class="btn btn-primario" @click="provaSuono">Prova avviso</button>
+        <button class="btn" @click="provaPush">Prova notifica a schermo spento</button>
+      </div>
     </div>
     <div class="card">
       <h3>Backup dei dati</h3>

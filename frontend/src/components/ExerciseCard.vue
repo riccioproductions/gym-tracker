@@ -5,11 +5,13 @@ import { pesoLato } from '../utils'
 
 const props = defineProps({
   eg: Object, serie: Array, bozze: Object, passoKg: Number, occupato: Boolean,
+  totale: Number,       // serie totali (scheda + aggiuntive)
+  rimovibile: Boolean,  // l'ultima serie aggiuntiva si può togliere
   ultima: Array // es. ['8×20', '8×20', '7×20']: sessione precedente
 })
-const emit = defineEmits(['spunta', 'annulla'])
+const emit = defineEmits(['spunta', 'annulla', 'aggiungi', 'togli'])
 
-const totale = computed(() => props.eg.serie || 1)
+const totale = computed(() => props.totale || props.eg.serie || 1)
 const unilaterale = computed(() => !!props.eg.unilaterale)
 
 // Esercizio normale: 1, 2, 3… — unilaterale: 1 SX, 1 DX, 2 SX, 2 DX…
@@ -63,7 +65,10 @@ function modifica(n, lato, campo, v) {
         <strong>{{ eg.esercizio.nome }}</strong>
         <span class="num">{{ riassunto }}</span>
       </div>
-      <button class="btn btn-ghost btn-sm" @click="espansa = true">Modifica</button>
+      <div class="riga-azioni" style="flex-wrap: nowrap">
+        <button class="btn btn-ghost btn-sm" :disabled="occupato" @click="emit('aggiungi', eg)">+ Serie</button>
+        <button class="btn btn-ghost btn-sm" @click="espansa = true">Modifica</button>
+      </div>
     </div>
   </article>
 
@@ -99,6 +104,10 @@ function modifica(n, lato, campo, v) {
       </template>
     </div>
 
-    <button v-if="completato" class="btn btn-ghost btn-sm" @click="espansa = false">Comprimi</button>
+    <div class="riga-azioni" style="margin-top: 10px">
+      <button class="btn btn-ghost btn-sm" :disabled="occupato" @click="emit('aggiungi', eg)">+ Serie</button>
+      <button v-if="rimovibile" class="btn btn-ghost btn-sm" @click="emit('togli', eg)">− Serie extra</button>
+      <button v-if="completato" class="btn btn-ghost btn-sm" @click="espansa = false">Comprimi</button>
+    </div>
   </article>
 </template>

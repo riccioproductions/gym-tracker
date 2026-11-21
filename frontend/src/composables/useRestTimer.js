@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { now } from './useNow'
 import { ls } from '../utils'
+import { pushAttivo, programmaRecupero, annullaRecupero } from './usePush'
 
 const K_DURATA = 'gt_recupero_durata'
 const K_FINE = 'gt_recupero_fine'
@@ -29,6 +30,13 @@ watch(autoAvvio, v => ls.set(K_AUTO, v))
 watch(allarmeAttivo, v => ls.set('gt_allarme_app', v))
 watch(notificaAttiva, v => ls.set('gt_notifica', v))
 
+// Notifica push dal server (arriva anche a schermo spento): va riallineata a ogni cambio del recupero
+function sincronizzaPush() {
+  if (!pushAttivo.value || !notificaAttiva.value) return
+  if (fine.value === null) return annullaRecupero()
+  programmaRecupero(Math.max(1, Math.round((fine.value - Date.now()) / 1000)))
+}
+
 export function imposta(secondi) {
   durata.value = Math.min(900, Math.max(15, secondi))
 }
@@ -42,11 +50,14 @@ export function avvia(secondi = durata.value, fineForzata = null) {
   fine.value = fineForzata ?? Date.now() + secondi * 1000
   appenaFinito.value = false
   ls.set(K_FINE, { fine: fine.value, totale: totale.value })
+  sincronizzaPush()
 }
 
 export function ferma() {
+  const eraAttivo = fine.value !== null
   fine.value = null
   ls.set(K_FINE, { fine: 0, stop: Date.now() })
+  if (eraAttivo) sincronizzaPush() // annulla l'invio programmato
 }
 
 /** Aggiusta il recupero in corso (+/- scaglioni da 15s). */
@@ -57,6 +68,7 @@ export function regola(delta) {
   fine.value = nuovaFine
   totale.value = Math.max(15, totale.value + delta)
   ls.set(K_FINE, { fine: fine.value, totale: totale.value })
+  sincronizzaPush()
 }
 
 /** Dopo un refresh/riapertura: riprende il recupero ancora attivo. */
@@ -114,7 +126,7 @@ export function provaSuono() {
   appenaFinito.value = true
 }
 
-// L'avviso si ripete ogni 6 secondi finché non tocchi lo schermo (chiudiFinito) o non parte un nuovo recupero
+// L'avviso si ripete ogni 4 secondi finché non tocchi lo schermo (chiudiFinito) o non parte un nuovo recupero
 let ripetizione = null
 watch(appenaFinito, attivo => {
   clearInterval(ripetizione)
@@ -136,6 +148,7 @@ function finito() {
   ferma()
   appenaFinito.value = true
   try {
+    // Notifica di sistema sempre, anche con l'app in primo piano (oltre al popup)
     if (notificaAttiva.value && 'Notification' in window && Notification.permission === 'granted') {
       const titolo = 'Recupero terminato'
       const opz = { body: 'Puoi iniziare la serie successiva.', tag: 'recupero' }

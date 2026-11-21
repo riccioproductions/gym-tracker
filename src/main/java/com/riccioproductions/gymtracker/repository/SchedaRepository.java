@@ -11,6 +11,10 @@ import java.util.Optional;
 
 public interface SchedaRepository extends JpaRepository<Scheda, Long> {
     List<Scheda> findByUtenteIdOrderByIdAsc(Long utenteId);
+
+    // Per le schermate: l'ultima scheda inserita compare in cima
+    List<Scheda> findByUtenteIdOrderByIdDesc(Long utenteId);
+
     Optional<Scheda> findByIdAndUtenteId(Long id, Long utenteId);
 
     // Migrazione: i dati creati prima del multiutente passano al primo utente registrato

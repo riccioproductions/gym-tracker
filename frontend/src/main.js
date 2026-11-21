@@ -3,6 +3,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import App from './App.vue'
 import { sbloccaAudio } from './composables/useRestTimer'
 import { token } from './composables/useAuth'
+import { assicuraPush } from './composables/usePush'
 import './composables/useSettings' // applica subito il colore scelto
 import './style.css'
 
@@ -30,3 +31,12 @@ router.beforeEach(to => {
 document.addEventListener('pointerdown', sbloccaAudio, { passive: true })
 
 createApp(App).use(router).mount('#app')
+
+// Service worker per le notifiche push; se il permesso c'è già, riallinea la sottoscrizione col server
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(() => { if (token.value) assicuraPush() })
+      .catch(() => { /* push non disponibile */ })
+  })
+}
