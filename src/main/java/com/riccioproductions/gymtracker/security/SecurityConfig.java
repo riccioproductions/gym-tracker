@@ -35,7 +35,7 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                .requestMatchers("/api/auth/stato", "/api/auth/accedi", "/api/auth/registrati").permitAll()
+                .requestMatchers("/api/auth/stato", "/api/auth/accedi", "/api/auth/registrati", "/api/auth/recupera/richiedi", "/api/auth/recupera/conferma").permitAll()
                 .requestMatchers("/api/**").authenticated()
                 .anyRequest().permitAll())                     // frontend statico (index.html, assets...)
             .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {

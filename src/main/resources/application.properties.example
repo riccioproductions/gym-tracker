@@ -4,8 +4,11 @@ spring.datasource.password=PASSWORDMYSQL
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
-
 gymtracker.jwt.segreto=${GYM_JWT_SEGRETO:}
 gymtracker.codice-invito=${GYM_CODICE_INVITO:}
+
+gymtracker.push.chiave-pubblica=${GYM_PUSH_PUBBLICA:}
+gymtracker.push.chiave-privata=${GYM_PUSH_PRIVATA:}
+gymtracker.push.soggetto=${GYM_PUSH_SOGGETTO:mail@example.com}
 
 server.port=8080
