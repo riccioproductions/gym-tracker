@@ -23,4 +23,5 @@ bin/
 .factorypath
 backups/
 *.sql
-dump_db.sh
+dump_db.sh*:Zone.Identifier
+src/main/resources/static/

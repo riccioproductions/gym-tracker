@@ -9,6 +9,13 @@ gymtracker.codice-invito=${GYM_CODICE_INVITO:}
 
 gymtracker.push.chiave-pubblica=${GYM_PUSH_PUBBLICA:}
 gymtracker.push.chiave-privata=${GYM_PUSH_PRIVATA:}
-gymtracker.push.soggetto=${GYM_PUSH_SOGGETTO:mail@example.com}
+gymtracker.push.soggetto=${GYM_PUSH_SOGGETTO:}
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=${GYM_MAIL_UTENTE:}
+spring.mail.password=${GYM_MAIL_PASSWORD:}
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
 
 server.port=8080
