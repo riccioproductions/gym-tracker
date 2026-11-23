@@ -57,6 +57,7 @@ public class AllenamentoService {
         if (esercizioGiornoId == null || numeroSerie == null || ripetizioniEffettuate == null) {
             throw new RuntimeException("Dati della serie incompleti");
         }
+        controllaValoriSerie(numeroSerie, ripetizioniEffettuate, caricoEffettivo);
         Allenamento allenamento = trovaPerId(allenamentoId, utenteId);
 
         EsercizioGiorno eg = esercizioGiornoRepository.findByIdAndGiornoSchedaUtenteId(esercizioGiornoId, utenteId)
@@ -70,7 +71,6 @@ public class AllenamentoService {
             throw new RuntimeException("Lato non valido: " + lato);
         }
 
-        //Evita doppioni (es. doppio tocco sul pulsante "Fatta"); il lato distingue SX e DX della stessa serie
         boolean giaPresente = serieRepository.findByAllenamentoId(allenamentoId).stream()
                 .anyMatch(s -> s.getEsercizioGiorno().getId().equals(esercizioGiornoId)
                         && s.getNumeroSerie().equals(numeroSerie)
@@ -100,6 +100,7 @@ public class AllenamentoService {
     @Transactional
     public SerieEseguita modificaSerie(Long utenteId, Long allenamentoId, Long serieId,
                                        Integer ripetizioni, Double carico) {
+    	controllaValoriSerie(null, ripetizioni, carico);
         SerieEseguita s = trovaSerie(utenteId, allenamentoId, serieId);
         if (ripetizioni != null) s.setRipetizioniEffettuate(ripetizioni);
         s.setCaricoEffettivo(carico);
@@ -114,6 +115,18 @@ public class AllenamentoService {
             throw new RuntimeException("La serie non appartiene a questo allenamento");
         }
         return s;
+    }
+    
+    private static void controllaValoriSerie(Integer numeroSerie, Integer ripetizioni, Double carico) {
+        if (numeroSerie != null && (numeroSerie < 1 || numeroSerie > 100)) {
+            throw new RuntimeException("Numero di serie non valido.");
+        }
+        if (ripetizioni != null && (ripetizioni < 0 || ripetizioni > 1000)) {
+            throw new RuntimeException("Le ripetizioni devono essere tra 0 e 1000.");
+        }
+        if (carico != null && (carico.isNaN() || carico < 0 || carico > 1000)) {
+            throw new RuntimeException("Il carico deve essere tra 0 e 1000 kg.");
+        }
     }
 
     public Allenamento termina(Long utenteId, Long allenamentoId) {

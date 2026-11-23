@@ -6,12 +6,14 @@ export const ACCENTI = {
   blu: { nome: 'Blu', c: '#3d7bff', ink: '#ffffff' },
   verde: { nome: 'Verde', c: '#34b76b', ink: '#07210f' },
   arancione: { nome: 'Arancione', c: '#ff8a3d', ink: '#1f0d00' },
-  viola: { nome: 'Viola', c: '#9b6bff', ink: '#ffffff' }
+  viola: { nome: 'Viola', c: '#9b6bff', ink: '#ffffff' },
+  rosso: { nome: 'Rosso', c: '#ff4757', ink: '#ffffff' },
+  bianco: { nome: 'Bianco', c: '#f4f6f8', ink: '#0f172a' }
 }
 
 export const passoKg = ref(Number(ls.get('gt_passo_peso', 0.5)))
-const salvato = ls.get('gt_accento', 'blu')
-export const accento = ref(ACCENTI[salvato] ? salvato : 'blu')
+const salvato = ls.get('gt_accento', 'arancione')
+export const accento = ref(ACCENTI[salvato] ? salvato : 'arancione')
 
 watch(passoKg, v => ls.set('gt_passo_peso', v))
 watch(accento, v => {

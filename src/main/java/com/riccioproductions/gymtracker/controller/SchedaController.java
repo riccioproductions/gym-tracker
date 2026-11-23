@@ -6,6 +6,7 @@ import com.riccioproductions.gymtracker.service.SchedaService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/schede")
@@ -28,13 +29,13 @@ public class SchedaController {
     }
 
     @PostMapping
-    public Scheda crea(@AuthenticationPrincipal Utente utente, @RequestBody Scheda scheda) {
-        scheda.setId(null); // in creazione l'id non può arrivare dal client
+    public Scheda crea(@AuthenticationPrincipal Utente utente,@Valid @RequestBody Scheda scheda) {
+        scheda.setId(null); 
         return service.salva(utente.getId(), scheda);
     }
 
     @PutMapping("/{id}")
-    public Scheda modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long id, @RequestBody Scheda scheda) {
+    public Scheda modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long id, @Valid @RequestBody Scheda scheda) {
         scheda.setId(id);
         return service.salva(utente.getId(), scheda);
     }

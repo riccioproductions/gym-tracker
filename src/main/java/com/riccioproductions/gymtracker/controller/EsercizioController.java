@@ -6,6 +6,7 @@ import com.riccioproductions.gymtracker.service.EsercizioService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/esercizi")
@@ -23,14 +24,13 @@ public class EsercizioController {
     }
 
     @PostMapping
-    public Esercizio crea(@AuthenticationPrincipal Utente utente, @RequestBody Esercizio esercizio) {
+    public Esercizio crea(@AuthenticationPrincipal Utente utente, @Valid @RequestBody Esercizio esercizio) {
         esercizio.setId(null);
         return service.salva(utente.getId(), esercizio);
     }
 
     @PutMapping("/{id}")
-    public Esercizio modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long id,
-                              @RequestBody Esercizio esercizio) {
+    public Esercizio modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long id, @Valid @RequestBody Esercizio esercizio) {
         esercizio.setId(id);
         return service.salva(utente.getId(), esercizio);
     }

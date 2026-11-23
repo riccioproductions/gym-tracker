@@ -3,8 +3,8 @@ package com.riccioproductions.gymtracker.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
+import jakarta.validation.constraints.*;
 
-// Il nome è univoco per utente (non più globale): due utenti possono avere entrambi "Panca piana".
 @Entity
 @Data
 @Table(name = "esercizio",
@@ -15,9 +15,12 @@ public class Esercizio {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Il nome dell'esercizio è obbligatorio.")
+    @Size(max = 100, message = "Il nome dell'esercizio può avere al massimo 100 caratteri.")
     @Column(nullable = false)
     private String nome;
 
+    @Size(max = 50, message = "Il gruppo muscolare può avere al massimo 50 caratteri.")
     private String gruppoMuscolare;
 
     @JsonIgnore

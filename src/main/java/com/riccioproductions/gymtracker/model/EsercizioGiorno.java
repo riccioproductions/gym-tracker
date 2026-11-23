@@ -3,6 +3,7 @@ package com.riccioproductions.gymtracker.model;
 import jakarta.persistence.*;
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.*;
 
 @Entity
 @Data
@@ -21,12 +22,24 @@ public class EsercizioGiorno {
     @JoinColumn(name = "esercizio_id", nullable = false)
     private Esercizio esercizio;
 
+    @Min(value = 1, message = "Le serie devono essere almeno 1.")
+    @Max(value = 100, message = "Troppe serie.")
     private Integer serie;
+
+    @Min(value = 1, message = "Le ripetizioni target devono essere almeno 1.")
+    @Max(value = 1000, message = "Ripetizioni target troppo alte.")
     private Integer ripetizioniTarget;
+
+    @DecimalMin(value = "0", message = "Il carico non può essere negativo.")
+    @DecimalMax(value = "1000", message = "Carico troppo alto.")
     private Double carico;
+
+    @Size(max = 255, message = "Le note possono avere al massimo 255 caratteri.")
     private String note;
+
+    @Min(value = 0, message = "L'ordine non è valido.")
+    @Max(value = 1000, message = "L'ordine non è valido.")
     private Integer ordine;
 
-    // true: ogni serie si esegue per lato (SX e DX)
     private Boolean unilaterale = false;
 }

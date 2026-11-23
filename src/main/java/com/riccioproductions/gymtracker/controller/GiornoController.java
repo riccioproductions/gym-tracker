@@ -6,6 +6,7 @@ import com.riccioproductions.gymtracker.service.GiornoService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/schede/{schedaId}/giorni")
@@ -23,14 +24,14 @@ public class GiornoController {
     }
 
     @PostMapping
-    public Giorno crea(@AuthenticationPrincipal Utente utente, @PathVariable Long schedaId, @RequestBody Giorno giorno) {
+    public Giorno crea(@AuthenticationPrincipal Utente utente, @PathVariable Long schedaId,@Valid @RequestBody Giorno giorno) {
         giorno.setId(null);
         return service.salva(utente.getId(), schedaId, giorno);
     }
 
     @PutMapping("/{id}")
     public Giorno modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long schedaId,
-                           @PathVariable Long id, @RequestBody Giorno giorno) {
+                           @PathVariable Long id,@Valid @RequestBody Giorno giorno) {
         giorno.setId(id);
         return service.salva(utente.getId(), schedaId, giorno);
     }

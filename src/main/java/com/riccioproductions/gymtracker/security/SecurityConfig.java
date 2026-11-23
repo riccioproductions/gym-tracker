@@ -28,16 +28,16 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filtri(HttpSecurity http, JwtService jwtService, UtenteRepository utenti) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable)            // niente cookie di sessione: si usa il token nell'header
+            .csrf(AbstractHttpConfigurer::disable)           
             .formLogin(AbstractHttpConfigurer::disable)
             .httpBasic(AbstractHttpConfigurer::disable)
             .cors(Customizer.withDefaults())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                .requestMatchers("/api/auth/stato", "/api/auth/accedi", "/api/auth/registrati", "/api/auth/recupera/richiedi", "/api/auth/recupera/conferma").permitAll()
+                .requestMatchers("/api/auth/accedi", "/api/auth/registrati", "/api/auth/recupera/richiedi", "/api/auth/recupera/conferma").permitAll()
                 .requestMatchers("/api/**").authenticated()
-                .anyRequest().permitAll())                     // frontend statico (index.html, assets...)
+                .anyRequest().permitAll())                     
             .exceptionHandling(e -> e.authenticationEntryPoint((req, res, ex) -> {
                 res.setStatus(401);
                 res.setContentType("application/json;charset=UTF-8");
@@ -52,14 +52,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // Serve solo a evitare l'utente temporaneo (con password nei log) che Spring Boot creerebbe da solo
     @Bean
     UserDetailsService nessunUtenteInMemoria() {
         return username -> { throw new UsernameNotFoundException(username); };
     }
 
-    // In produzione frontend e API hanno la stessa origine e il CORS non serve.
-    // Per lo sviluppo (Vite su un'altra porta) le origini ammesse sono configurabili.
     @Bean
     CorsConfigurationSource corsConfigurationSource(
             @Value("${gymtracker.cors.origini:http://localhost:5173,http://127.0.0.1:5173}") List<String> origini) {

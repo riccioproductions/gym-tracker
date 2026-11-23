@@ -6,6 +6,7 @@ import com.riccioproductions.gymtracker.service.EsercizioGiornoService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/giorni/{giornoId}/esercizi")
@@ -24,15 +25,13 @@ public class EsercizioGiornoController {
 
     @PostMapping("/{esercizioId}")
     public EsercizioGiorno crea(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId,
-                                @PathVariable Long esercizioId, @RequestBody EsercizioGiorno eg) {
-        eg.setId(null); // senza questo, un id nel corpo sovrascriverebbe una riga esistente
+                                @PathVariable Long esercizioId, @Valid @RequestBody EsercizioGiorno eg) {
+        eg.setId(null); 
         return service.salva(utente.getId(), giornoId, esercizioId, eg);
     }
 
     @PutMapping("/{id}/{esercizioId}")
-    public EsercizioGiorno modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId,
-                                    @PathVariable Long id, @PathVariable Long esercizioId,
-                                    @RequestBody EsercizioGiorno eg) {
+    public EsercizioGiorno modifica(@AuthenticationPrincipal Utente utente, @PathVariable Long giornoId, @PathVariable Long id, @PathVariable Long esercizioId,@Valid @RequestBody EsercizioGiorno eg) {
         eg.setId(id);
         return service.salva(utente.getId(), giornoId, esercizioId, eg);
     }

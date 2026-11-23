@@ -5,6 +5,7 @@ import lombok.Data;
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.validation.constraints.*;
 
 @Entity
 @Data
@@ -14,9 +15,13 @@ public class Giorno {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Il nome del giorno è obbligatorio.")
+    @Size(max = 100, message = "Il nome del giorno può avere al massimo 100 caratteri.")
     @Column(nullable = false)
-    private String nome; 
+    private String nome;
 
+    @Min(value = 0, message = "L'ordine non è valido.")
+    @Max(value = 1000, message = "L'ordine non è valido.")
     private Integer ordine;
 
     @JsonIgnore

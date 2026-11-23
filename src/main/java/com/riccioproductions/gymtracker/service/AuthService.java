@@ -31,34 +31,25 @@ public class AuthService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final UtenteRepository utenti;
-    private final SchedaRepository schede;
     private final EsercizioRepository esercizi;
-    private final AllenamentoRepository allenamenti;
     private final PasswordEncoder encoder;
     private final JwtService jwt;
     private final LimitatoreTentativi limitatore;
     private final MailService mail;
     private final String codiceInvito;
 
-    public AuthService(UtenteRepository utenti, SchedaRepository schede, EsercizioRepository esercizi,
-                       AllenamentoRepository allenamenti, PasswordEncoder encoder, JwtService jwt,
-                       LimitatoreTentativi limitatore, MailService mail,
-                       @Value("${gymtracker.codice-invito:}") String codiceInvito) {
-        this.utenti = utenti;
-        this.schede = schede;
-        this.esercizi = esercizi;
-        this.allenamenti = allenamenti;
-        this.encoder = encoder;
-        this.jwt = jwt;
-        this.limitatore = limitatore;
-        this.mail = mail;
-        this.codiceInvito = codiceInvito == null ? "" : codiceInvito.trim();
-    }
-
-    /** true finché non esiste nessun utente: il primo che si registra eredita i dati già presenti. */
-    public boolean primoUtente() {
-        return utenti.count() == 0;
-    }
+    public AuthService(UtenteRepository utenti, EsercizioRepository esercizi,
+            PasswordEncoder encoder, JwtService jwt,
+            LimitatoreTentativi limitatore, MailService mail,
+            @Value("${gymtracker.codice-invito:}") String codiceInvito) {
+    			this.utenti = utenti;
+    			this.esercizi = esercizi;
+    			this.encoder = encoder;
+    			this.jwt = jwt;
+    			this.limitatore = limitatore;
+    			this.mail = mail;
+    			this.codiceInvito = codiceInvito == null ? "" : codiceInvito.trim();
+    	}
 
     @Transactional
     public Map<String, String> registra(String username, String email, String password, String codice, String ip) {
@@ -72,17 +63,15 @@ public class AuthService {
             throw errore(HttpStatus.BAD_REQUEST, "La password deve avere da 8 a 72 caratteri.");
         }
 
-        boolean primo = primoUtente();
-        if (!primo) {
-            if (codiceInvito.isEmpty()) {
-                throw errore(HttpStatus.FORBIDDEN, "Le registrazioni sono chiuse.");
-            }
-            limitatore.verifica("ip:" + ip, 20);
-            if (!uguali(codiceInvito, codice == null ? "" : codice.trim())) {
-                limitatore.fallito("ip:" + ip);
-                throw errore(HttpStatus.FORBIDDEN, "Codice di invito non valido.");
-            }
+        if (codiceInvito.isEmpty()) {
+            throw errore(HttpStatus.FORBIDDEN, "Le registrazioni sono chiuse.");
         }
+        limitatore.verifica("ip:" + ip, 20);
+        if (!uguali(codiceInvito, codice == null ? "" : codice.trim())) {
+            limitatore.fallito("ip:" + ip);
+            throw errore(HttpStatus.FORBIDDEN, "Codice di invito non valido.");
+        }
+
         if (utenti.existsByUsername(nome)) {
             throw errore(HttpStatus.CONFLICT, "Username già in uso.");
         }
@@ -90,19 +79,13 @@ public class AuthService {
             throw errore(HttpStatus.CONFLICT, "Email già in uso.");
         }
 
+
         Utente nuovo = new Utente();
         nuovo.setUsername(nome);
         nuovo.setEmail(mailNorm);
         nuovo.setPasswordHash(encoder.encode(password));
         nuovo = utenti.save(nuovo);
 
-        if (primo) { // migrazione: schede, esercizi e allenamenti creati prima del multiutente
-            schede.assegnaOrfane(nuovo);
-            esercizi.assegnaOrfani(nuovo);
-            allenamenti.assegnaOrfani(nuovo);
-        }
-
-        // Catalogo iniziale: chi parte da zero trova già gli esercizi più comuni
         if (esercizi.findByUtenteId(nuovo.getId()).isEmpty()) {
             esercizi.saveAll(CatalogoEsercizi.per(nuovo));
         }
@@ -124,12 +107,11 @@ public class AuthService {
         return risposta(u);
     }
 
-    /** Password dimenticata, passo 1: invia per email un codice monouso. Risponde sempre allo stesso modo (non rivela se l'email esiste). */
     @Transactional
     public void richiediReset(String email, String ip) {
         String e = email == null ? "" : email.trim().toLowerCase();
         limitatore.verifica("resetip:" + ip, 10);
-        limitatore.verifica("resetmail:" + e, 3); // al massimo 3 email ogni 15 minuti per indirizzo
+        limitatore.verifica("resetmail:" + e, 3); 
         limitatore.fallito("resetip:" + ip);
         limitatore.fallito("resetmail:" + e);
 
@@ -147,7 +129,6 @@ public class AuthService {
                 + "Se non l'hai richiesto tu, ignora questa email: la tua password non è cambiata.\n");
     }
 
-    /** Passo 2: email + codice + nuova password. In caso di successo l'utente è già collegato. */
     @Transactional
     public Map<String, String> confermaReset(String email, String codice, String nuovaPassword, String ip) {
         String e = email == null ? "" : email.trim().toLowerCase();
@@ -170,19 +151,17 @@ public class AuthService {
         limitatore.azzera("utente:" + u.getUsername());
 
         u.setPasswordHash(encoder.encode(nuovaPassword));
-        u.setResetCodiceHash(null); // monouso
+        u.setResetCodiceHash(null); 
         u.setResetScadenza(null);
         utenti.save(u);
         return risposta(u);
     }
 
-    /** Utente collegato: imposta o cambia la propria email. Serve la password. */
     @Transactional
     public void impostaEmail(Long utenteId, String email, String password) {
         Utente u = utenti.findById(utenteId)
                 .orElseThrow(() -> errore(HttpStatus.NOT_FOUND, "Utente non trovato."));
         limitatore.verifica("utente:" + u.getUsername(), 5);
-        // 403 e non 401: un 401 farebbe uscire l'utente dalla sessione
         if (password == null || !encoder.matches(password, u.getPasswordHash())) {
             limitatore.fallito("utente:" + u.getUsername());
             throw errore(HttpStatus.FORBIDDEN, "Password errata.");
@@ -194,7 +173,7 @@ public class AuthService {
             if (!altro.getId().equals(u.getId())) throw errore(HttpStatus.CONFLICT, "Email già in uso.");
         });
         u.setEmail(nuova);
-        u.setResetCodiceHash(null); // un codice emesso per il vecchio indirizzo non vale più
+        u.setResetCodiceHash(null); 
         u.setResetScadenza(null);
         utenti.save(u);
     }
@@ -207,7 +186,6 @@ public class AuthService {
         return e;
     }
 
-    // Codice nel formato XXXX-XXXX
     private static String nuovoCodice() {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < 8; i++) {
@@ -229,7 +207,6 @@ public class AuthService {
         return username == null ? "" : username.trim().toLowerCase();
     }
 
-    // Confronto a tempo costante, per non rivelare il codice a tentativi
     private static boolean uguali(String a, String b) {
         return MessageDigest.isEqual(a.getBytes(StandardCharsets.UTF_8), b.getBytes(StandardCharsets.UTF_8));
     }

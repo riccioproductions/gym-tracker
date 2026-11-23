@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { api } from '../api'
 import { errore, toast } from '../composables/useUi'
 import { entra } from '../composables/useAuth'
@@ -10,15 +10,7 @@ const username = ref('')
 const email = ref('')
 const password = ref('')
 const codice = ref('')     // codice di invito (registrazione) o codice ricevuto per email (recupero)
-const primoUtente = ref(false)
 const occupato = ref(false)
-
-onMounted(async () => {
-  try {
-    primoUtente.value = (await api('/auth/stato')).primoUtente
-    if (primoUtente.value) modo.value = 'registrati' // nessun account ancora: si parte dalla registrazione
-  } catch (e) { errore(e) }
-})
 
 function vai(m) {
   modo.value = m
@@ -70,9 +62,6 @@ async function invia() {
         <button type="button" :aria-pressed="modo === 'registrati'" @click="vai('registrati')">Registrati</button>
       </div>
 
-      <p v-if="modo === 'registrati' && primoUtente" class="dim spiegazione">
-        È il primo account: erediterà le schede, gli esercizi e lo storico già presenti.
-      </p>
       <p v-if="modo === 'recupera'" class="dim spiegazione">
         {{ passo === 1 ? "Inserisci l'email del tuo account: ti inviamo un codice per scegliere una nuova password."
                        : 'Inserisci il codice ricevuto per email e scegli la nuova password.' }}
@@ -96,7 +85,7 @@ async function invia() {
           <input v-model="password" type="password" :autocomplete="modo === 'accedi' ? 'current-password' : 'new-password'">
         </label>
         <p v-if="modo === 'registrati' || (modo === 'recupera' && passo === 2)" class="dim spiegazione">Password di almeno 8 caratteri.</p>
-        <label v-if="modo === 'registrati' && !primoUtente" class="campo">
+        <label v-if="modo === 'registrati'" class="campo">
           <span>Codice di invito</span>
           <input v-model="codice" autocomplete="off" autocapitalize="none" spellcheck="false">
         </label>

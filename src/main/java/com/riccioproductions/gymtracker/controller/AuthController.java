@@ -27,12 +27,6 @@ public class AuthController {
         this.account = account;
     }
 
-    // Pubblico: la schermata di login lo usa per sapere se mostrare il campo "codice di invito"
-    @GetMapping("/stato")
-    public Map<String, Object> stato() {
-        return Map.of("primoUtente", service.primoUtente());
-    }
-
     @PostMapping("/registrati")
     public Map<String, String> registrati(@RequestBody Richiesta r, HttpServletRequest req) {
         return service.registra(r.username(), r.email(), r.password(), r.codiceInvito(), ip(req));

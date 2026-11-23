@@ -9,8 +9,8 @@
   --chalk: #eef1f4;
   --chalk-dim: #a0a8b5;
   --chalk-faint: #6b7482;
-  --accent: #3d7bff;          /* unico colore d'accento: cambiabile da Impostazioni */
-  --accent-ink: #ffffff;
+  --accent: #ff8a3d;          
+  --accent-ink: #1f0d00;
   --accent-text: color-mix(in srgb, var(--accent) 62%, #fff);
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
   --red: #ef4b3f;
