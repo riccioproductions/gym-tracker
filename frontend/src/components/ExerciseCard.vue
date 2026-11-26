@@ -36,8 +36,7 @@ const espansa = ref(false)
 watch(completato, c => { if (c) espansa.value = false })
 const riassunto = computed(() => [...mie.value]
   .sort((a, b) => a.numeroSerie - b.numeroSerie || pesoLato(a) - pesoLato(b))
-  .map(s => `${s.lato ? s.lato + ' ' : ''}${s.ripetizioniEffettuate}×${s.caricoEffettivo ?? '-'}`)
-  .join(' · ') + ' kg')
+  .map(s => `${s.lato ? s.lato + ' ' : ''}${s.ripetizioniEffettuate}×${s.caricoEffettivo ?? '-'} kg`))
 
 const obiettivo = computed(() => {
   const p = []
@@ -63,7 +62,9 @@ function modifica(n, lato, campo, v) {
       <span class="pallino" aria-hidden="true">✓</span>
       <div class="serie-esito">
         <strong>{{ eg.esercizio.nome }}</strong>
-        <span class="num">{{ riassunto }}</span>
+        <div class="serie-riepilogo">
+          <span v-for="(r, i) in riassunto" :key="i" class="num">{{ r }}</span>
+        </div>
       </div>
       <div class="riga-azioni" style="flex-wrap: nowrap">
         <button class="btn btn-ghost btn-sm" :disabled="occupato" @click="emit('aggiungi', eg)">+ Serie</button>
