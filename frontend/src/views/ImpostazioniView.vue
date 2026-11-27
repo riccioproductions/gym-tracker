@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onActivated } from 'vue'
-import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo } from '../composables/useSettings'
+import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo, usaRange, incrementoKg, PASSI_INCREMENTO } from '../composables/useSettings'
 import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durata, imposta, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
 import { nomeUtente, esci } from '../composables/useAuth'
 import { mmss, ls } from '../utils'
@@ -182,6 +182,18 @@ async function procediPw() {
       <h3>Elimina account</h3>
       <p class="dim spiegazione">Cancella per sempre il tuo account e tutti i tuoi dati: schede, esercizi e storico. Scarica prima un backup se vuoi conservarli.</p>
       <button class="btn btn-pericolo" @click="apriPw('elimina')">Elimina il mio account</button>
+    </div>
+
+    <div class="card">
+  <h3>Rep range</h3>
+  <p class="dim spiegazione">Al posto delle ripetizioni target, ogni esercizio del giorno ha un intervallo (es. 4-6). A fine allenamento riceverai un suggerimento sul carico.</p>
+  <label class="interruttore campo"><input type="checkbox" v-model="usaRange"><span>Usa il rep range</span></label>
+  <template v-if="usaRange">
+    <p class="dim spiegazione">Imposta di quanto aumentare automaticamente il carico:</p>
+    <div class="segmenti" role="group" aria-label="Incremento del carico">
+      <button v-for="p in PASSI_INCREMENTO" :key="p" :aria-pressed="incrementoKg === p" @click="incrementoKg = p">{{ formatta(p) }} kg</button>
+    </div>
+  </template>
     </div>
 
     <!-- Conferma con password: cambio email / eliminazione account -->

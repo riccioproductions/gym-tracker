@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import Stepper from './Stepper.vue'
 import { pesoLato } from '../utils'
+import { usaRange } from '../composables/useSettings'
 
 const props = defineProps({
   eg: Object, serie: Array, bozze: Object, passoKg: Number, occupato: Boolean,
@@ -40,8 +41,10 @@ const riassunto = computed(() => [...mie.value]
 
 const obiettivo = computed(() => {
   const p = []
-  if (props.eg.serie && props.eg.ripetizioniTarget) {
-    p.push(`${props.eg.serie} × ${props.eg.ripetizioniTarget}${unilaterale.value ? ' per lato' : ''}`)
+  const rip = props.eg.ripetizioniTarget
+  const range = usaRange.value && props.eg.ripetizioniMax && rip ? `${rip}-${props.eg.ripetizioniMax}` : rip
+  if (props.eg.serie && range) {
+    p.push(`${props.eg.serie} × ${range}${unilaterale.value ? ' per lato' : ''}`)
   }
   if (props.eg.carico != null) p.push(`${props.eg.carico} kg`)
   if (props.eg.note) p.push(props.eg.note)

@@ -30,6 +30,10 @@ public class EsercizioGiorno {
     @Max(value = 1000, message = "Ripetizioni target troppo alte.")
     private Integer ripetizioniTarget;
 
+    @Min(value = 1, message = "Le ripetizioni massime devono essere almeno 1.")
+    @Max(value = 1000, message = "Ripetizioni massime troppo alte.")
+    private Integer ripetizioniMax;
+
     @DecimalMin(value = "0", message = "Il carico non può essere negativo.")
     @DecimalMax(value = "1000", message = "Carico troppo alto.")
     private Double carico;

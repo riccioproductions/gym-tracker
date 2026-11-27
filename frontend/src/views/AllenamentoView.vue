@@ -5,10 +5,11 @@ import { now } from '../composables/useNow'
 import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, notificaAttiva, durataUnilaterale } from '../composables/useRestTimer'
 import { attivaPush, assicuraPush, pushAttivo } from '../composables/usePush'
 import { toast, errore, conferma } from '../composables/useUi'
-import { ls, hhmmss, dataIt, compatta } from '../utils'
-import { passoKg } from '../composables/useSettings'
+import { ls, hhmmss, dataIt, compatta, suggerimenti } from '../utils'
+import { passoKg, usaRange, incrementoKg } from '../composables/useSettings'
 import ExerciseCard from '../components/ExerciseCard.vue'
 import RestPanel from '../components/RestPanel.vue'
+import Modal from '../components/Modal.vue'
 
 const caricamento = ref(true)
 const occupato = ref(false)
@@ -22,6 +23,7 @@ const serie = ref([])             // serie già registrate
 const bozze = reactive({})        // valori in digitazione, per "esercizioGiorno_numeroSerie"
 const extra = reactive({})        // serie aggiuntive di questo allenamento: { [esercizioGiornoId]: n }
 const ultimo = ref(null)          // ultimo allenamento eseguito (mostrato prima di iniziarne uno)
+const consigli = ref([]) 
 let ripristinatoPer = null
 
 const lati = eg => (eg.unilaterale ? ['SX', 'DX'] : [null])   // un esercizio unilaterale ha una sottoserie per lato
@@ -212,6 +214,7 @@ async function termina() {
     ? (mancano === 1 ? 'Manca 1 serie' : 'Mancano ' + mancano + ' serie') + ". Terminare comunque l'allenamento?"
     : "Confermi di voler terminare l'allenamento?"
   if (!await conferma(testo, { etichetta: 'Termina', pericolo: false })) return
+  const sugg = usaRange.value ? suggerimenti(esercizi.value, serie.value, incrementoKg.value) : []
   try {
     await api(`/allenamenti/${allenamento.value.id}/termina`, 'PUT')
     ferma()
@@ -222,6 +225,7 @@ async function termina() {
     ls.set('gt_extra', null)
     await caricaSchede()
     caricaUltimo()
+    consigli.value = sugg
   } catch (e) { errore(e) }
 }
 
@@ -277,5 +281,18 @@ onActivated(carica)
 
       <button id="btn-termina" class="btn btn-pericolo btn-blocco termina" @click="termina">Termina allenamento</button>
     </template>
+    <Modal :aperto="consigli.length > 0" titolo="Consigli per la prossima sessione" @chiudi="consigli = []">
+  <ul class="righe">
+    <li v-for="c in consigli" :key="c.id" class="riga">
+      <div class="riga-testo">
+        <strong><span :class="'trend-' + c.tipo">{{ c.simbolo }}</span> {{ c.nome }}</strong>
+        <span class="dim">{{ c.testo }}</span>
+      </div>
+    </li>
+  </ul>
+  <template #piede>
+    <button class="btn btn-primario" @click="consigli = []">Ok</button>
+  </template>
+</Modal>
   </section>
 </template>

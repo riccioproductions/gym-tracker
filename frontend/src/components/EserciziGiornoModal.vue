@@ -2,7 +2,7 @@
 import { ref, reactive, watch } from 'vue'
 import { api } from '../api'
 import { errore, conferma } from '../composables/useUi'
-import { passoKg } from '../composables/useSettings'
+import { passoKg, usaRange } from '../composables/useSettings'
 import Modal from './Modal.vue'
 import Stepper from './Stepper.vue'
 
@@ -11,7 +11,7 @@ const emit = defineEmits(['chiudi'])
 
 const catalogo = ref([])
 const lista = ref([])
-const vuotoForm = () => ({ aperto: false, id: null, esercizioId: '', serie: null, rip: null, carico: null, note: '', ordine: null, unilaterale: false })
+const vuotoForm = () => ({ aperto: false, id: null, esercizioId: '', serie: null, rip: null, carico: null, note: '', ordine: null, unilaterale: false, ripMax: null })
 const form = reactive(vuotoForm())
 
 watch(() => props.giorno, async g => {
@@ -29,7 +29,7 @@ async function carica() {
 
 function apriForm(eg = null) {
   Object.assign(form, vuotoForm(), eg ? {
-    id: eg.id, esercizioId: eg.esercizio.id, serie: eg.serie, rip: eg.ripetizioniTarget,
+    id: eg.id, esercizioId: eg.esercizio.id, serie: eg.serie, rip: eg.ripetizioniTarget, ripMax: eg.ripetizioniMax ?? null, 
     carico: eg.carico, note: eg.note ?? '', ordine: eg.ordine, unilaterale: !!eg.unilaterale
   } : {}, { aperto: true })
 }
@@ -41,8 +41,10 @@ async function salva() {
     serie: form.serie ?? null, ripetizioniTarget: form.rip ?? null, carico: form.carico ?? null,
     note: form.note.trim() || null,
     unilaterale: form.unilaterale,
-    ordine: form.id ? form.ordine : lista.value.length + 1 // l'ordine va sempre inviato, altrimenti si azzera
+    ordine: form.id ? form.ordine : lista.value.length + 1, 
+    ripetizioniMax: form.ripMax ?? null
   }
+  if (usaRange.value && form.rip && form.ripMax && form.ripMax < form.rip) return errore(new Error('Il massimo del range non può essere minore del minimo.'))
   try {
     if (form.id) await api(`/giorni/${props.giorno.id}/esercizi/${form.id}/${form.esercizioId}`, 'PUT', dato)
     else await api(`/giorni/${props.giorno.id}/esercizi/${form.esercizioId}`, 'POST', dato)
@@ -67,11 +69,13 @@ async function sposta(i, delta) {
   try {
     await Promise.all(l.map((eg, idx) => eg.ordine === idx + 1 ? null
       : api(`/giorni/${props.giorno.id}/esercizi/${eg.id}/${eg.esercizio.id}`, 'PUT', {
-          serie: eg.serie, ripetizioniTarget: eg.ripetizioniTarget, carico: eg.carico, note: eg.note, ordine: idx + 1, unilaterale: !!eg.unilaterale
+          serie: eg.serie, ripetizioniTarget: eg.ripetizioniTarget, ripetizioniMax: eg.ripetizioniMax, carico: eg.carico, note: eg.note, ordine: idx + 1, unilaterale: !!eg.unilaterale
         })))
     await carica()
   } catch (e) { errore(e) }
 }
+
+const ripTxt = eg => (usaRange.value && eg.ripetizioniMax ? `${eg.ripetizioniTarget ?? '-'}-${eg.ripetizioniMax}` : (eg.ripetizioniTarget ?? '-'))
 </script>
 
 <template>
@@ -81,7 +85,7 @@ async function sposta(i, delta) {
       <li v-for="(eg, i) in lista" :key="eg.id" class="riga">
         <div class="riga-testo">
           <strong>{{ eg.esercizio.nome }}</strong>
-          <span class="dim num">{{ eg.serie ?? '-' }} × {{ eg.ripetizioniTarget ?? '-' }} · {{ eg.carico ?? '-' }} kg</span>
+          <span class="dim num">{{ eg.serie ?? '-' }} × {{ ripTxt(eg) }} · {{ eg.carico ?? '-' }} kg</span>
           <span v-if="eg.unilaterale" class="tag">Unilaterale</span>
           <span v-if="eg.note" class="dim">{{ eg.note }}</span>
         </div>
@@ -108,10 +112,19 @@ async function sposta(i, delta) {
       </select>
     </label>
     <div class="tre-colonne">
-      <Stepper v-model="form.serie" etichetta="Serie" :min="1" />
-      <Stepper v-model="form.rip" etichetta="Rip. target" :min="1" />
-      <Stepper v-model="form.carico" etichetta="Carico (kg)" :step="passoKg" decimale />
-    </div>
+  <Stepper v-model="form.serie" etichetta="Serie" :min="1" />
+  <template v-if="usaRange">
+    <Stepper v-model="form.rip" etichetta="Rip. min" :min="1" />
+    <Stepper v-model="form.ripMax" etichetta="Rip. max" :min="1" />
+  </template>
+  <template v-else>
+    <Stepper v-model="form.rip" etichetta="Rip. target" :min="1" />
+    <Stepper v-model="form.carico" etichetta="Carico (kg)" :step="passoKg" decimale />
+  </template>
+</div>
+<div v-if="usaRange" class="campo">
+  <Stepper v-model="form.carico" etichetta="Carico (kg)" :step="passoKg" decimale />
+</div>
     <label class="campo"><span>Note (facoltative)</span><input v-model="form.note"></label>
     <label class="interruttore campo"><input type="checkbox" v-model="form.unilaterale"><span>Esercizio unilaterale (serie separate per SX e DX)</span></label>
     <template #piede>

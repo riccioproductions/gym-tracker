@@ -102,6 +102,7 @@ public class ImportService {
                     eg.setEsercizio(catalogo.get(chiave(txt(esMap, "nome"))));
                     eg.setSerie(intero(em, "serie"));
                     eg.setRipetizioniTarget(intero(em, "ripetizioniTarget"));
+                    eg.setRipetizioniMax(intero(em, "ripetizioniMax"));
                     eg.setCarico(reale(em, "carico"));
                     eg.setNote(txt(em, "note"));
                     eg.setOrdine(intero(em, "ordine"));

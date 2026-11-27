@@ -70,3 +70,30 @@ export function trend(att, prec) {
   if (att.totaleRipetizioni < prec.totaleRipetizioni) return { tipo: 'giu', simbolo: '▼', titolo: 'Ripetizioni diminuite' }
   return { tipo: 'uguale', simbolo: '=', titolo: 'Invariato rispetto alla sessione precedente' }
 }
+
+export function suggerimenti(esercizi, serie, incremento) {
+  const f = n => String(n).replace('.', ',')
+  const out = []
+  for (const eg of esercizi) {
+    const min = eg.ripetizioniTarget, max = eg.ripetizioniMax
+    if (!min || !max) continue
+    const fatte = compatta(serie.filter(s => s.esercizioGiorno.id === eg.id))
+    if (!fatte.length) continue
+    const rip = fatte.map(s => s.ripetizioniEffettuate ?? 0)
+    const carichi = fatte.map(s => s.caricoEffettivo).filter(c => c != null)
+    const base = carichi.length ? Math.max(...carichi) : null
+    const nome = eg.esercizio.nome
+    const nuovo = d => (base === null ? null : Math.max(0, Math.round((base + d) * 100) / 100))
+
+    if (rip.some(r => r < min)) {
+      const n = nuovo(-incremento)
+      out.push({ id: eg.id, nome, tipo: 'giu', simbolo: '▼',
+        testo: `Eseguite serie sotto le ${min} rip. ` + (n === null ? 'Abbassa il carico.' : `Prova ${f(n)} kg (−${f(incremento)}kg).`) })
+    } else if (fatte.length >= (eg.serie || 1) && rip.every(r => r >= max)) {
+      const n = nuovo(incremento)
+      out.push({ id: eg.id, nome, tipo: 'su', simbolo: '▲',
+        testo: `Raggiunte ${max} rip in tutte le serie. ` + (n === null ? 'Aumenta il carico.' : `Prova ${f(n)} kg (+${f(incremento)}kg).`) })
+    }
+  }
+  return out
+}

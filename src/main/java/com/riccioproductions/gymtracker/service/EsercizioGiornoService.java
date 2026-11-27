@@ -35,6 +35,9 @@ public class EsercizioGiornoService {
             repository.findByIdAndGiornoSchedaUtenteId(eg.getId(), utenteId)
                     .orElseThrow(() -> new RuntimeException("Esercizio del giorno non trovato: " + eg.getId()));
         }
+        if (eg.getRipetizioniMax() != null && eg.getRipetizioniTarget() != null && eg.getRipetizioniMax() < eg.getRipetizioniTarget()) {
+            throw new RuntimeException("Il massimo del range non può essere minore del minimo.");
+        }
         eg.setGiorno(giorno);
         eg.setEsercizio(esercizio);
         return repository.save(eg);

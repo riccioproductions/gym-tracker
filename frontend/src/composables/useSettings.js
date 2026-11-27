@@ -23,6 +23,12 @@ watch(accento, v => {
   document.documentElement.style.setProperty('--accent-ink', a.ink)
 }, { immediate: true })
 
-// Storico: true = per gli esercizi unilaterali mostra solo il lato più debole; false = mostra SX e DX
 export const storicoSoloMinimo = ref(ls.get('gt_storico_min', true))
 watch(storicoSoloMinimo, v => ls.set('gt_storico_min', v))
+
+export const usaRange = ref(ls.get('gt_rep_range', false))
+watch(usaRange, v => ls.set('gt_rep_range', v))
+
+export const PASSI_INCREMENTO = [1, 2, 2.5, 5]
+export const incrementoKg = ref(Number(ls.get('gt_incremento', 2)))
+watch(incrementoKg, v => ls.set('gt_incremento', v))
