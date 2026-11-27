@@ -32,3 +32,6 @@ watch(usaRange, v => ls.set('gt_rep_range', v))
 export const PASSI_INCREMENTO = [1, 2, 2.5, 5]
 export const incrementoKg = ref(Number(ls.get('gt_incremento', 2)))
 watch(incrementoKg, v => ls.set('gt_incremento', v))
+
+export const applicaSuggerimenti = ref(ls.get('gt_applica_sugg', false))
+watch(applicaSuggerimenti, v => ls.set('gt_applica_sugg', v))

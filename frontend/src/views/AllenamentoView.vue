@@ -6,7 +6,7 @@ import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, notificaAttiva, d
 import { attivaPush, assicuraPush, pushAttivo } from '../composables/usePush'
 import { toast, errore, conferma } from '../composables/useUi'
 import { ls, hhmmss, dataIt, compatta, suggerimenti } from '../utils'
-import { passoKg, usaRange, incrementoKg } from '../composables/useSettings'
+import { passoKg, usaRange, incrementoKg, applicaSuggerimenti } from '../composables/useSettings'
 import ExerciseCard from '../components/ExerciseCard.vue'
 import RestPanel from '../components/RestPanel.vue'
 import Modal from '../components/Modal.vue'
@@ -215,6 +215,8 @@ async function termina() {
     : "Confermi di voler terminare l'allenamento?"
   if (!await conferma(testo, { etichetta: 'Termina', pericolo: false })) return
   const sugg = usaRange.value ? suggerimenti(esercizi.value, serie.value, incrementoKg.value) : []
+  const giornoCorrente = allenamento.value.giorno.id
+  const egs = [...esercizi.value]
   try {
     await api(`/allenamenti/${allenamento.value.id}/termina`, 'PUT')
     ferma()
@@ -225,8 +227,23 @@ async function termina() {
     ls.set('gt_extra', null)
     await caricaSchede()
     caricaUltimo()
-    consigli.value = sugg
+    consigli.value = sugg.map(c => ({ ...c, giornoId: giornoCorrente, eg: egs.find(e => e.id === c.id) }))
   } catch (e) { errore(e) }
+}
+
+const puoApplicare = computed(() => applicaSuggerimenti.value && consigli.value.some(c => c.nuovoCarico != null && c.eg))
+
+async function applicaConsigli() {
+  const lista = consigli.value.filter(c => c.nuovoCarico != null && c.eg)
+  occupato.value = true
+  try {
+    await Promise.all(lista.map(c => api(`/giorni/${c.giornoId}/esercizi/${c.eg.id}/${c.eg.esercizio.id}`, 'PUT', {
+      serie: c.eg.serie, ripetizioniTarget: c.eg.ripetizioniTarget, ripetizioniMax: c.eg.ripetizioniMax,
+      carico: c.nuovoCarico, note: c.eg.note, ordine: c.eg.ordine, unilaterale: !!c.eg.unilaterale
+    })))
+    toast(lista.length === 1 ? 'Carico aggiornato nella scheda.' : `Carichi aggiornati nella scheda (${lista.length} esercizi).`)
+    consigli.value = []
+  } catch (e) { errore(e) } finally { occupato.value = false }
 }
 
 onActivated(carica)
@@ -282,17 +299,22 @@ onActivated(carica)
       <button id="btn-termina" class="btn btn-pericolo btn-blocco termina" @click="termina">Termina allenamento</button>
     </template>
     <Modal :aperto="consigli.length > 0" titolo="Consigli per la prossima sessione" @chiudi="consigli = []">
-  <ul class="righe">
-    <li v-for="c in consigli" :key="c.id" class="riga">
-      <div class="riga-testo">
-        <strong><span :class="'trend-' + c.tipo">{{ c.simbolo }}</span> {{ c.nome }}</strong>
-        <span class="dim">{{ c.testo }}</span>
-      </div>
-    </li>
-  </ul>
-  <template #piede>
-    <button class="btn btn-primario" @click="consigli = []">Ok</button>
-  </template>
-</Modal>
+      <ul class="righe">
+        <li v-for="c in consigli" :key="c.id" class="riga">
+          <div class="riga-testo">
+            <strong><span :class="'trend-' + c.tipo">{{ c.simbolo }}</span> {{ c.nome }}</strong>
+            <span class="dim">{{ c.testo }}</span>
+          </div>
+        </li>
+      </ul>
+      <p v-if="puoApplicare" class="testo-conferma">Applicare le modifiche suggerite alla scheda?</p>
+      <template #piede>
+        <template v-if="puoApplicare">
+          <button class="btn btn-ghost" @click="consigli = []">Non ora</button>
+          <button class="btn btn-primario" :disabled="occupato" @click="applicaConsigli">Applica alla scheda</button>
+        </template>
+        <button v-else class="btn btn-primario" @click="consigli = []">Ok</button>
+      </template>
+    </Modal>
   </section>
 </template>

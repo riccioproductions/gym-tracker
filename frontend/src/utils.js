@@ -87,11 +87,11 @@ export function suggerimenti(esercizi, serie, incremento) {
 
     if (rip.some(r => r < min)) {
       const n = nuovo(-incremento)
-      out.push({ id: eg.id, nome, tipo: 'giu', simbolo: '▼',
+      out.push({ id: eg.id, nome, tipo: 'giu', simbolo: '▼', nuovoCarico: n,
         testo: `Eseguite serie sotto le ${min} rip. ` + (n === null ? 'Abbassa il carico.' : `Prova ${f(n)} kg (−${f(incremento)}kg).`) })
     } else if (fatte.length >= (eg.serie || 1) && rip.every(r => r >= max)) {
       const n = nuovo(incremento)
-      out.push({ id: eg.id, nome, tipo: 'su', simbolo: '▲',
+      out.push({ id: eg.id, nome, tipo: 'su', simbolo: '▲', nuovoCarico: n,
         testo: `Raggiunte ${max} rip in tutte le serie. ` + (n === null ? 'Aumenta il carico.' : `Prova ${f(n)} kg (+${f(incremento)}kg).`) })
     }
   }

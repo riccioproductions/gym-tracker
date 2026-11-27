@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, onActivated } from 'vue'
-import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo, usaRange, incrementoKg, PASSI_INCREMENTO } from '../composables/useSettings'
+import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo, usaRange, incrementoKg, PASSI_INCREMENTO, applicaSuggerimenti } from '../composables/useSettings'
 import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durata, imposta, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
 import { nomeUtente, esci } from '../composables/useAuth'
 import { mmss, ls } from '../utils'
@@ -103,16 +103,8 @@ async function procediPw() {
   <section>
     <header class="titolo-pagina"><h1>Impostazioni</h1></header>
 
-    <div class="card">
-      <h3>Account</h3>
-      <p class="dim spiegazione">Sei collegato come <strong>{{ nomeUtente }}</strong>.</p>
-      <p v-if="emailCaricata && emailAccount" class="dim spiegazione">Email di recupero: <strong>{{ emailAccount }}</strong></p>
-      <p v-else-if="emailCaricata" class="spiegazione">Non hai ancora un'email: aggiungila per poter recuperare la password se la dimentichi.</p>
-      <div class="riga-azioni">
-        <button class="btn" @click="apriPw('email')">{{ emailAccount ? 'Cambia email' : 'Aggiungi email' }}</button>
-        <button class="btn btn-pericolo" @click="esci">Esci</button>
-      </div>
-    </div>
+    <!-- ===== ALLENAMENTO ===== -->
+    <h2 class="sezione">Allenamento</h2>
 
     <div class="card">
       <h3>Passo del peso</h3>
@@ -123,34 +115,42 @@ async function procediPw() {
     </div>
 
     <div class="card">
-      <h3>Colore dell'app</h3>
-      <p class="dim spiegazione">Il colore usato per pulsanti, timer e serie completate.</p>
-      <div class="swatches" role="group" aria-label="Colore dell'app">
-        <button v-for="(a, chiave) in ACCENTI" :key="chiave" class="swatch" :aria-pressed="accento === chiave"
-                :aria-label="a.nome" :title="a.nome" :style="{ background: a.c }" @click="accento = chiave"></button>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Recupero predefinito</h3>
-      <p class="dim spiegazione">Recupero dopo ogni serie degli esercizi normali. Durante l'allenamento si può ritoccare dal timer.</p>
-      <div class="recupero-riga" style="grid-template-columns: auto 1fr auto">
-        <button class="btn btn-sm" @click="imposta(durata - PASSO)" aria-label="Riduci recupero di 15 secondi">−{{ PASSO }}s</button>
-        <div class="recupero-tempo"><small>Recupero</small><strong class="num">{{ mmss(durata) }}</strong></div>
-        <button class="btn btn-sm" @click="imposta(durata + PASSO)" aria-label="Aumenta recupero di 15 secondi">+{{ PASSO }}s</button>
-      </div>
+      <h3>Rep range</h3>
+      <p class="dim spiegazione">Al posto delle ripetizioni target, ogni esercizio del giorno ha un intervallo (es. 4-6). A fine allenamento riceverai un suggerimento sul carico.</p>
+      <label class="interruttore campo"><input type="checkbox" v-model="usaRange"><span>Usa il rep range</span></label>
+      <template v-if="usaRange">
+        <p class="dim spiegazione">Di quanto aumentare o ridurre il carico:</p>
+        <div class="segmenti" role="group" aria-label="Incremento del carico" style="margin-bottom: 14px">
+          <button v-for="p in PASSI_INCREMENTO" :key="p" :aria-pressed="incrementoKg === p" @click="incrementoKg = p">{{ formatta(p) }} kg</button>
+        </div>
+        <label class="interruttore campo"><input type="checkbox" v-model="applicaSuggerimenti"><span>Applica i suggerimenti alla scheda</span></label>
+        <p class="dim spiegazione">Attiva: a fine allenamento ti viene chiesto se aggiornare il carico degli esercizi nella scheda con i valori suggeriti. Disattiva: ricevi solo il suggerimento.</p>
+      </template>
     </div>
 
     <div class="card">
       <h3>Esercizi unilaterali</h3>
-      <p class="dim spiegazione">Recupero predefinito dopo ogni sottoserie (SX o DX).</p>
-      <div class="recupero-riga" style="grid-template-columns: auto 1fr auto; margin-bottom: 16px">
-        <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale - PASSO)" aria-label="Riduci recupero unilaterali di 15 secondi">−{{ PASSO }}s</button>
-        <div class="recupero-tempo"><small>Recupero unilaterali</small><strong class="num">{{ mmss(durataUnilaterale) }}</strong></div>
-        <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale + PASSO)" aria-label="Aumenta recupero unilaterali di 15 secondi">+{{ PASSO }}s</button>
-      </div>
       <label class="interruttore campo"><input type="checkbox" v-model="storicoSoloMinimo"><span>Nello storico mostra solo il valore minore</span></label>
       <p class="dim spiegazione">Attiva: per ogni serie compare solo il lato con meno ripetizioni. Disattiva: compaiono entrambi i lati (SX e DX).</p>
+    </div>
+
+    <!-- ===== RECUPERO E AVVISI ===== -->
+    <h2 class="sezione">Recupero e avvisi</h2>
+
+    <div class="card">
+      <h3>Recupero predefinito</h3>
+      <p class="dim spiegazione">Recupero dopo ogni serie degli esercizi normali. Durante l'allenamento si può ritoccare dal timer.</p>
+      <div class="recupero-riga" style="grid-template-columns: auto 1fr auto; margin-bottom: 18px">
+        <button class="btn btn-sm" @click="imposta(durata - PASSO)" aria-label="Riduci recupero di 15 secondi">−{{ PASSO }}s</button>
+        <div class="recupero-tempo"><small>Esercizi normali</small><strong class="num">{{ mmss(durata) }}</strong></div>
+        <button class="btn btn-sm" @click="imposta(durata + PASSO)" aria-label="Aumenta recupero di 15 secondi">+{{ PASSO }}s</button>
+      </div>
+      <p class="dim spiegazione">Recupero dopo ogni sottoserie (SX o DX) degli esercizi unilaterali.</p>
+      <div class="recupero-riga" style="grid-template-columns: auto 1fr auto">
+        <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale - PASSO)" aria-label="Riduci recupero unilaterali di 15 secondi">−{{ PASSO }}s</button>
+        <div class="recupero-tempo"><small>Unilaterali</small><strong class="num">{{ mmss(durataUnilaterale) }}</strong></div>
+        <button class="btn btn-sm" @click="impostaUnilaterale(durataUnilaterale + PASSO)" aria-label="Aumenta recupero unilaterali di 15 secondi">+{{ PASSO }}s</button>
+      </div>
     </div>
 
     <div class="card">
@@ -163,6 +163,32 @@ async function procediPw() {
       <div class="riga-azioni">
         <button class="btn btn-primario" @click="provaSuono">Prova avviso</button>
         <button class="btn" @click="provaPush">Prova notifica a schermo spento</button>
+      </div>
+    </div>
+
+    <!-- ===== ASPETTO ===== -->
+    <h2 class="sezione">Aspetto</h2>
+
+    <div class="card">
+      <h3>Colore dell'app</h3>
+      <p class="dim spiegazione">Il colore usato per pulsanti, timer e serie completate.</p>
+      <div class="swatches" role="group" aria-label="Colore dell'app">
+        <button v-for="(a, chiave) in ACCENTI" :key="chiave" class="swatch" :aria-pressed="accento === chiave"
+                :aria-label="a.nome" :title="a.nome" :style="{ background: a.c }" @click="accento = chiave"></button>
+      </div>
+    </div>
+
+    <!-- ===== ACCOUNT E DATI ===== -->
+    <h2 class="sezione">Account e dati</h2>
+
+    <div class="card">
+      <h3>Account</h3>
+      <p class="dim spiegazione">Sei collegato come <strong>{{ nomeUtente }}</strong>.</p>
+      <p v-if="emailCaricata && emailAccount" class="dim spiegazione">Email di recupero: <strong>{{ emailAccount }}</strong></p>
+      <p v-else-if="emailCaricata" class="spiegazione">Non hai ancora un'email: aggiungila per poter recuperare la password se la dimentichi.</p>
+      <div class="riga-azioni">
+        <button class="btn" @click="apriPw('email')">{{ emailAccount ? 'Cambia email' : 'Aggiungi email' }}</button>
+        <button class="btn btn-pericolo" @click="esci">Esci</button>
       </div>
     </div>
 
@@ -182,18 +208,6 @@ async function procediPw() {
       <h3>Elimina account</h3>
       <p class="dim spiegazione">Cancella per sempre il tuo account e tutti i tuoi dati: schede, esercizi e storico. Scarica prima un backup se vuoi conservarli.</p>
       <button class="btn btn-pericolo" @click="apriPw('elimina')">Elimina il mio account</button>
-    </div>
-
-    <div class="card">
-  <h3>Rep range</h3>
-  <p class="dim spiegazione">Al posto delle ripetizioni target, ogni esercizio del giorno ha un intervallo (es. 4-6). A fine allenamento riceverai un suggerimento sul carico.</p>
-  <label class="interruttore campo"><input type="checkbox" v-model="usaRange"><span>Usa il rep range</span></label>
-  <template v-if="usaRange">
-    <p class="dim spiegazione">Imposta di quanto aumentare automaticamente il carico:</p>
-    <div class="segmenti" role="group" aria-label="Incremento del carico">
-      <button v-for="p in PASSI_INCREMENTO" :key="p" :aria-pressed="incrementoKg === p" @click="incrementoKg = p">{{ formatta(p) }} kg</button>
-    </div>
-  </template>
     </div>
 
     <!-- Conferma con password: cambio email / eliminazione account -->
