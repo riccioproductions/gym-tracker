@@ -97,3 +97,20 @@ export function suggerimenti(esercizi, serie, incremento) {
   }
   return out
 }
+
+/** Analisi dei recuperi di un allenamento, dai timestamp delle serie.
+ *  Tra due serie passa recupero + esecuzione della serie successiva: `margine` (secondi) è l'esecuzione/spostamento
+ *  stimato che non conta come tempo perso. Oltre previsto + margine, la differenza è "tempo morto". */
+export function analisiRecuperi(serie, previsto, previstoUni, margine = 60) {
+  const ord = serie.filter(s => s.timestampCompletamento)
+    .sort((a, b) => new Date(a.timestampCompletamento) - new Date(b.timestampCompletamento))
+  let n = 0, somma = 0, morto = 0
+  for (let i = 0; i < ord.length - 1; i++) {
+    const gap = (new Date(ord[i + 1].timestampCompletamento) - new Date(ord[i].timestampCompletamento)) / 1000
+    const prev = ord[i].lato ? previstoUni : previsto
+    n++
+    somma += gap
+    if (gap - prev - margine > 0) morto += gap - prev - margine
+  }
+  return n ? { medio: Math.round(somma / n), morto: Math.round(morto) } : null
+}

@@ -6,6 +6,7 @@ import { pushAttivo, programmaRecupero, annullaRecupero } from './usePush'
 const K_DURATA = 'gt_recupero_durata'
 const K_FINE = 'gt_recupero_fine'
 const K_AUTO = 'gt_recupero_auto'
+const K_SCADUTO = 'gt_recupero_scaduto'
 
 export const PRESET = [90, 180, 300]
 export const PASSO = 15
@@ -15,6 +16,16 @@ export const autoAvvio = ref(ls.get(K_AUTO, true))         // parte da solo dopo
 export const fine = ref(null)                              // orario assoluto di fine (ms)
 export const totale = ref(durata.value)
 export const appenaFinito = ref(false)
+
+// Ritardo: dopo la fine del recupero conta in avanti finché non registri la serie successiva
+const FINESTRA_RITARDO = 30 * 60 * 1000 // oltre 30 min il dato è considerato vecchio
+export const TOLLERANZA = 30 // secondi concessi dopo la fine del recupero per iniziare la serie
+const salvatoScaduto = ls.get(K_SCADUTO, null)
+export const scadutoDa = ref(salvatoScaduto && Date.now() - salvatoScaduto < FINESTRA_RITARDO ? salvatoScaduto : null)
+export const inRitardo = computed(() => scadutoDa.value !== null && fine.value === null && now.value - scadutoDa.value > TOLLERANZA * 1000)
+export const ritardo = computed(() => (scadutoDa.value ? Math.max(0, Math.floor((now.value - scadutoDa.value) / 1000) - TOLLERANZA) : 0))
+function impostaScaduto(v) { scadutoDa.value = v; ls.set(K_SCADUTO, v) }
+export const azzeraRitardo = () => impostaScaduto(null)
 
 export const inCorso = computed(() => fine.value !== null)
 export const rimanenti = computed(() => (fine.value ? Math.max(0, Math.ceil((fine.value - now.value) / 1000)) : 0))
@@ -46,6 +57,7 @@ export function impostaUnilaterale(secondi) {
 }
 
 export function avvia(secondi = durata.value, fineForzata = null) {
+  impostaScaduto(null)
   totale.value = secondi
   fine.value = fineForzata ?? Date.now() + secondi * 1000
   appenaFinito.value = false
@@ -54,6 +66,7 @@ export function avvia(secondi = durata.value, fineForzata = null) {
 }
 
 export function ferma() {
+  impostaScaduto(null)
   const eraAttivo = fine.value !== null
   fine.value = null
   ls.set(K_FINE, { fine: 0, stop: Date.now() })
@@ -71,17 +84,20 @@ export function regola(delta) {
   sincronizzaPush()
 }
 
-/** Dopo un refresh/riapertura: riprende il recupero ancora attivo. */
-export function ripristina(serie) {
+/** Dopo un refresh/riapertura: riprende il recupero ancora attivo o il ritardo in corso. */
+export function ripristina(serie, completo = false) {
   const salvato = ls.get(K_FINE, null)
   let ripresa = salvato && salvato.fine > Date.now() ? salvato : null
+  if (completo) impostaScaduto(null)
   if (!ripresa && serie?.length) {
     const stop = salvato?.stop ?? 0
     const ultimaSerie = serie.reduce((a, b) => (new Date(b.timestampCompletamento) > new Date(a.timestampCompletamento) ? b : a))
     const ultima = new Date(ultimaSerie.timestampCompletamento).getTime()
     const dur = ultimaSerie.lato ? durataUnilaterale.value : durata.value
     const t = ultima + dur * 1000
+    if (scadutoDa.value && ultima > scadutoDa.value) impostaScaduto(null) // serie già registrata dopo la fine del recupero
     if (ultima > stop && t > Date.now()) ripresa = { fine: t, totale: dur }
+    else if (!completo && ultima > stop && scadutoDa.value === null && Date.now() - t < FINESTRA_RITARDO) impostaScaduto(t)
   }
   if (ripresa) avvia(ripresa.totale, ripresa.fine)
 }
@@ -145,7 +161,9 @@ export function chiediNotifiche() {
 }
 
 function finito() {
+  const finita = fine.value // orario reale di fine, anche se il tab era sospeso
   ferma()
+  impostaScaduto(finita)
   appenaFinito.value = true
   try {
     // Notifica di sistema sempre, anche con l'app in primo piano (oltre al popup)

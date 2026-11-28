@@ -2,11 +2,11 @@
 import { ref, reactive, computed, watch, nextTick, onActivated } from 'vue'
 import { api } from '../api'
 import { now } from '../composables/useNow'
-import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, notificaAttiva, durataUnilaterale } from '../composables/useRestTimer'
+import { ferma, avvia as avviaRecupero, autoAvvio, ripristina, notificaAttiva, durataUnilaterale, azzeraRitardo, durata as recuperoPredefinito } from '../composables/useRestTimer'
 import { attivaPush, assicuraPush, pushAttivo } from '../composables/usePush'
 import { toast, errore, conferma } from '../composables/useUi'
 import { ls, hhmmss, dataIt, compatta, suggerimenti } from '../utils'
-import { passoKg, usaRange, incrementoKg, applicaSuggerimenti } from '../composables/useSettings'
+import { passoKg, usaRange, incrementoKg, applicaSuggerimenti, durataObiettivo } from '../composables/useSettings'
 import ExerciseCard from '../components/ExerciseCard.vue'
 import RestPanel from '../components/RestPanel.vue'
 import Modal from '../components/Modal.vue'
@@ -50,6 +50,28 @@ const trascorso = computed(() => allenamento.value
   ? Math.max(0, Math.floor((now.value - new Date(allenamento.value.dataInizio)) / 1000)) : 0)
 const serieTotali = computed(() => esercizi.value.reduce((t, eg) => t + totaleSerie(eg) * lati(eg).length, 0))
 const percentuale = computed(() => serieTotali.value ? Math.min(100, (serie.value.length / serieTotali.value) * 100) : 0)
+// ---- Fine prevista: proietta quando finirai, al ritmo che stai tenendo ----
+const ESECUZIONE_STIMATA = 45 // secondi per eseguire una serie, usati finché non ci sono almeno 3 serie fatte
+const proiezione = computed(() => {
+  const obiettivo = durataObiettivo.value
+  if (!obiettivo || !allenamento.value) return null
+  const fatte = serie.value.length
+  const mancanti = serieTotali.value - fatte
+  if (mancanti <= 0) return null
+  const inizio = new Date(allenamento.value.dataInizio).getTime()
+  const ultimoTs = serie.value.reduce((m, s) => Math.max(m, new Date(s.timestampCompletamento).getTime() || inizio), inizio)
+  // ritmo = millisecondi per serie (recupero + esecuzione)
+  const ritmo = fatte >= 3 ? (ultimoTs - inizio) / fatte : (recuperoPredefinito.value + ESECUZIONE_STIMATA) * 1000
+  // se stai fermo oltre un ritmo, la proiezione scorre con te
+  const base = Math.max(ultimoTs, now.value - ritmo)
+  const fine = base + mancanti * ritmo
+  const scarto = Math.round((fine - (inizio + obiettivo * 60000)) / 60000)
+  const ora = new Date(fine).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+  return {
+    sfora: scarto > 0,
+    testo: scarto > 0 ? `Fine prevista ${ora} · ${scarto} min oltre l'obiettivo` : `Fine prevista ${ora} · in linea con l'obiettivo`
+  }
+})
 
 // ---- serie aggiuntive (salvate sul dispositivo, legate a questo allenamento) ----
 function salvaExtra() {
@@ -92,7 +114,7 @@ async function carica() {
       caricaExtra()
       await caricaEsercizi()
       caricaUltima() // senza await: non blocca la schermata
-      if (ripristinatoPer !== inCorso.id) { ripristina(serie.value); ripristinatoPer = inCorso.id }
+      if (ripristinatoPer !== inCorso.id) { ripristina(serie.value, esercizi.value.every(eCompleto)); ripristinatoPer = inCorso.id }
       assicuraPush()
     } else {
       allenamento.value = null
@@ -178,6 +200,7 @@ async function spunta(eg, n, lato = null) {
       esercizioGiornoId: eg.id, numeroSerie: n, ripetizioniEffettuate: b.rip, caricoEffettivo: b.car, lato
     })
     serie.value.push(nuova)
+    azzeraRitardo() // serie registrata: il ritardo si ferma (se parte un nuovo recupero, riparte il timer)
     // le serie successive non ancora toccate ereditano i valori appena confermati
     for (let k = n + 1; k <= totaleSerie(eg); k++) {
       const nb = bozze[chiave(eg.id, k, lato)]
@@ -288,6 +311,7 @@ onActivated(carica)
         <span :style="{ width: percentuale + '%' }" :class="{ completo: percentuale >= 100 }"></span>
       </div>
       <p class="dim conteggio">{{ serie.length }} di {{ serieTotali }} serie</p>
+      <p v-if="proiezione" class="conteggio proiezione" :class="{ 'proiezione-sfora': proiezione.sfora }">{{ proiezione.testo }}</p>
 
       <RestPanel />
 

@@ -35,3 +35,6 @@ watch(incrementoKg, v => ls.set('gt_incremento', v))
 
 export const applicaSuggerimenti = ref(ls.get('gt_applica_sugg', false))
 watch(applicaSuggerimenti, v => ls.set('gt_applica_sugg', v))
+
+export const durataObiettivo = ref(Number(ls.get('gt_obiettivo_min', 60)))
+watch(durataObiettivo, v => ls.set('gt_obiettivo_min', v))

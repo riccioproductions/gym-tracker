@@ -1,7 +1,8 @@
 <script setup>
 import { computed } from 'vue'
-import { dataIt, oraIt, perEsercizio, riepilogo, trend, compatta, pesoLato } from '../utils'
+import { dataIt, oraIt, perEsercizio, riepilogo, trend, compatta, pesoLato, analisiRecuperi, mmss } from '../utils'
 import { storicoSoloMinimo } from '../composables/useSettings'
+import { durata as recuperoPredefinito, durataUnilaterale } from '../composables/useRestTimer'
 
 const props = defineProps({ allenamento: Object, serie: Array, precedente: Object, mostraGiorno: Boolean })
 defineEmits(['elimina'])
@@ -11,6 +12,7 @@ const durata = computed(() => {
   return a.dataFine ? `${Math.round((new Date(a.dataFine) - new Date(a.dataInizio)) / 60000)} min` : '-'
 })
 const completato = computed(() => props.allenamento.stato === 'COMPLETATO')
+const recuperi = computed(() => analisiRecuperi(props.serie, recuperoPredefinito.value, durataUnilaterale.value))
 const esercizi = computed(() => {
   const att = riepilogo(props.serie) // il trend si basa sempre sul lato più debole
   // Spunta in Impostazioni: solo il valore minore per gli unilaterali, oppure entrambi i lati
@@ -33,10 +35,19 @@ const esercizi = computed(() => {
       </div>
       <button class="btn btn-pericolo btn-sm" @click="$emit('elimina', allenamento.id)">Elimina</button>
     </header>
-    <div class="storico-meta">
-      <span v-if="mostraGiorno" class="tag">{{ allenamento.giorno.nome }}</span>
-      <span class="tag" :class="completato ? 'tag-ok' : 'tag-wip'">{{ completato ? 'Completato' : 'In corso' }}</span>
-      <span class="tag">Durata {{ durata }}</span>
+    <div class="storico-riga2">
+      <strong v-if="mostraGiorno" class="storico-giorno">{{ allenamento.giorno.nome }}</strong>
+      <span class="stato" :class="completato ? 'stato-ok' : 'stato-wip'">{{ completato ? 'Completato' : 'In corso' }}</span>
+    </div>
+    <div class="storico-stats">
+      <div class="stat">
+        <small>Durata</small>
+        <strong class="num">{{ durata }}</strong>
+      </div>
+      <div v-if="recuperi" class="stat" :class="{ 'stat-ritardo': recuperi.morto > 0 }">
+        <small>Tempo morto</small>
+        <strong class="num">{{ mmss(recuperi.morto) }}</strong>
+      </div>
     </div>
     <p v-if="!esercizi.length" class="dim">Nessuna serie registrata.</p>
     <div v-for="e in esercizi" :key="e.id" class="storico-esercizio">

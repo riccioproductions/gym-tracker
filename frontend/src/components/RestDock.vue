@@ -1,5 +1,5 @@
 <script setup>
-import { rimanenti, inCorso, progresso, appenaFinito, regola, ferma, chiudiFinito, PASSO } from '../composables/useRestTimer'
+import { rimanenti, inCorso, progresso, appenaFinito, inRitardo, ritardo, regola, ferma, chiudiFinito, azzeraRitardo, PASSO } from '../composables/useRestTimer'
 import { mmss } from '../utils'
 </script>
 
@@ -19,5 +19,11 @@ import { mmss } from '../utils'
       <strong>Recupero terminato</strong>
       <span>Tocca per fermare l'allarme</span>
     </div>
+  </div>
+
+  <!-- Dopo il popup: il ritardo continua a correre finché non spunti la serie -->
+  <div v-else-if="inRitardo" class="dock dock-ritardo" role="timer" aria-label="Ritardo sul recupero">
+    <div class="dock-tempo"><small>In ritardo: fai la serie!</small><strong class="num">+{{ mmss(ritardo) }}</strong></div>
+    <button class="btn btn-sm btn-ghost" @click="azzeraRitardo()">Nascondi</button>
   </div>
 </template>

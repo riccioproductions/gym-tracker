@@ -1,16 +1,28 @@
 <script setup>
 import { ref, reactive, computed, onActivated } from 'vue'
-import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo, usaRange, incrementoKg, PASSI_INCREMENTO, applicaSuggerimenti } from '../composables/useSettings'
+import { passoKg, accento, PASSI_PESO, ACCENTI, storicoSoloMinimo, usaRange, incrementoKg, PASSI_INCREMENTO, applicaSuggerimenti, durataObiettivo } from '../composables/useSettings'
 import { provaSuono, allarmeAttivo, notificaAttiva, chiediNotifiche, durata, imposta, durataUnilaterale, impostaUnilaterale, PASSO } from '../composables/useRestTimer'
 import { nomeUtente, esci } from '../composables/useAuth'
 import { mmss, ls } from '../utils'
 import { api } from '../api'
 import { toast, errore, conferma } from '../composables/useUi'
 import Modal from '../components/Modal.vue'
+import Stepper from '../components/Stepper.vue'
 
 import { attivaPush, disattivaPush, pushAttivo, serveInstallazione, errorepush } from '../composables/usePush'
 
 const formatta = p => String(p).replace('.', ',')
+
+// Durata obiettivo: salvata in minuti totali, mostrata come ore + minuti
+const limita = (v, max) => Math.min(max, Math.max(0, Math.round(Number(v) || 0)))
+const obOre = computed({
+  get: () => Math.floor(durataObiettivo.value / 60),
+  set: v => { durataObiettivo.value = limita(v, 5) * 60 + (durataObiettivo.value % 60) }
+})
+const obMin = computed({
+  get: () => durataObiettivo.value % 60,
+  set: v => { durataObiettivo.value = Math.floor(durataObiettivo.value / 60) * 60 + limita(v, 59) }
+})
 
 // Email dell'account (serve per recuperare la password)
 const emailAccount = ref(null)
@@ -111,6 +123,15 @@ async function procediPw() {
       <p class="dim spiegazione">Di quanto cambiano i pulsanti − e + del peso durante l'allenamento.</p>
       <div class="segmenti" role="group" aria-label="Passo del peso">
         <button v-for="p in PASSI_PESO" :key="p" :aria-pressed="passoKg === p" @click="passoKg = p">{{ formatta(p) }} kg</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Durata obiettivo</h3>
+      <p class="dim spiegazione">Durante l'allenamento vedi l'orario di fine previsto e di quanti minuti stai sforando. Con 0 ore e 0 minuti la funzione è disattivata.</p>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+        <Stepper v-model="obOre" etichetta="Ore" :min="0" :max="5" />
+        <Stepper v-model="obMin" etichetta="Minuti" :min="0" :max="59" :step="5" />
       </div>
     </div>
 

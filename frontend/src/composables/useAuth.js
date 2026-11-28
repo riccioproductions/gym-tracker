@@ -4,7 +4,7 @@ import { ls } from '../utils'
 const K_TOKEN = 'gt_token'
 const K_UTENTE = 'gt_utente'
 // Dati legati all'utente: vanno tolti all'uscita, così il prossimo che entra da questo dispositivo non li eredita
-const K_DA_PULIRE = [K_TOKEN, K_UTENTE, 'gt_recupero_fine', 'gt_scheda', 'gt_extra', 'gt_push', 'gt_push_endpoint']
+const K_DA_PULIRE = [K_TOKEN, K_UTENTE, 'gt_recupero_fine', 'gt_recupero_scaduto', 'gt_scheda', 'gt_extra', 'gt_push', 'gt_push_endpoint']
 
 export const token = ref(ls.get(K_TOKEN, null))
 export const nomeUtente = ref(ls.get(K_UTENTE, ''))
